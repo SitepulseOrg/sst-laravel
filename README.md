@@ -434,10 +434,6 @@ To send logs to AWS CloudWatch, you need to set the `LOG_CHANNEL` environment va
 
 ## Troubleshooting
 
-**APP_URL**
-
-In case your specified environment file does not contain the `APP_URL` variable, SST Laravel will automatically add it to the environment file with the value of the `web.domain` property.
-
 **Load Balancer and trusted proxies**
 
 SST Laravel puts the container behind a load balancer, so you must configure your Laravel application to trust the load balancer's IP addresses. You can do this by configuring the trusted proxies in `bootstrap/app.php`. If you deployed your app and it's trying to load assets using HTTP instead of HTTPS, this is likely the issue.
@@ -445,12 +441,6 @@ SST Laravel puts the container behind a load balancer, so you must configure you
 ```php
 ->withMiddleware(function (Middleware $middleware) {
     $middleware->trustProxies(at: '*');
-    $middleware->trustProxies(headers: Request::HEADER_X_FORWARDED_FOR |
-        Request::HEADER_X_FORWARDED_HOST |
-        Request::HEADER_X_FORWARDED_PORT |
-        Request::HEADER_X_FORWARDED_PROTO |
-        Request::HEADER_X_FORWARDED_AWS_ELB
-    );
 })
 ```
 
@@ -473,11 +463,15 @@ If you are getting the following error when deploying (usually via CI/CD), the i
    aws: failed to refresh cached credentials, no EC2 IMDS role found, operation error ec2imds: GetMetadata, failed to get API token, operation error ec2imds: getToken, http response error StatusCode: 400, request to EC2 IMDS failed
 ```
 
+**APP_URL**
+
+In case your specified environment file does not contain the `APP_URL` variable, SST Laravel will automatically add it to the environment file with the value of the `web.domain` property.
+
 ***
 
 ### Roadmap
 
-* Extend base Docker images;
+* Ability to extend base Docker images;
 * Add support for Inertia SSR;
 * Add support for Octane with FrankedPHP;
 * Add support for Laravel Reverb;
@@ -490,7 +484,7 @@ If you discover any security related issues, please email security@kirschbaumdev
 
 ## Sponsorship
 
-Development of this package is developed and sponsored by Kirschbaum Development Group, a developer driven company focused on problem solving, team building, and community. Learn more [about us](https://kirschbaumdevelopment.com) or [join us](https://careers.kirschbaumdevelopment.com)!
+Development of this package is sponsored by Kirschbaum Development Group, a developer driven company focused on problem solving, team building, and community. Learn more [about us](https://kirschbaumdevelopment.com) or [join us](https://careers.kirschbaumdevelopment.com)!
 
 ## License
 
