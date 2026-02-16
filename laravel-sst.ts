@@ -10,6 +10,11 @@ import { ClusterArgs } from "../../../.sst/platform/src/components/aws/cluster.j
 import { ServiceArgs } from "../../../.sst/platform/src/components/aws/service.js";
 import { Dns } from "../../../.sst/platform/src/components/dns.js";
 import { applyLinkedResourcesEnv, EnvCallback, EnvCallbacks, extractSecrets } from "./src/laravel-env";
+import { RemoteEnvVault, RemoteEnvVaultArgs } from "./src/laravel-env-manager";
+import { getPackagePath } from "./src/config";
+
+// Re-export RemoteEnvVault for external use
+export { RemoteEnvVault, RemoteEnvVaultArgs };
 
 // duplicate from cluster.ts
 type Port = `${number}/${"http" | "https" | "tcp" | "udp" | "tcp_udp" | "tls"}`;
@@ -181,20 +186,39 @@ export interface LaravelArgs extends ClusterArgs {
       autoInject?: Input<boolean>,
 
       /**
-       * Custom environment variables that will be automatically injected into your application.
-       *
-       * @example
-       * ```js
-       * environment: {
-       *   vars: {
-       *     SESSION_DRIVER: 'redis',
-       *     QUEUE_CONNECTION: 'redis',
-       *   }
-       * }
-       * ```
-       */
-      vars?: FunctionArgs["environment"],
-    };
+        * Custom environment variables that will be automatically injected into your application.
+        *
+        * @example
+        * ```js
+        * environment: {
+        *   vars: {
+        *     SESSION_DRIVER: 'redis',
+        *     QUEUE_CONNECTION: 'redis',
+        *   }
+        * }
+        * ```
+        */
+       vars?: FunctionArgs["environment"],
+
+       /**
+        * Use a `RemoteEnvVault` component to manage environment variables in AWS Secrets Manager.
+        * When provided, secrets will be fetched from AWS Secrets Manager at build time.
+        *
+        * @example
+        * ```js
+        * const env = new RemoteEnvVault("Env");
+        *
+        * new LaravelService("Laravel", {
+        *   config: {
+        *     environment: {
+        *       secrets: env,
+        *     },
+        *   },
+        * });
+        * ```
+        */
+       secrets?: RemoteEnvVault,
+     };
 
     /**
      * Custom deployment configurations.
@@ -223,7 +247,7 @@ export class LaravelService extends Component {
     args.config = args.config ?? {};
     const sitePath = args.path ?? '.';
     const absSitePath = path.resolve(sitePath.toString());
-    const nodeModulePath = path.resolve(__dirname, '../../node_modules/@kirschbaum-development/sst-laravel');
+    const nodeModulePath = getPackagePath();
 
     // Determine the path where our plugin will save build files.
     // SST sets __dirname to the .sst/platform directory.
@@ -287,6 +311,19 @@ export class LaravelService extends Component {
         dev: {
           command: `php ${sitePath}/artisan serve`,
         },
+
+        transform: {
+          taskDefinition: (args) => {
+            args.containerDefinitions = (args.containerDefinitions as $util.Output<string>).apply(a => {
+              return JSON.stringify([{
+                ...JSON.parse(a)[0],
+                linuxParameters: {
+                  initProcessEnabled: false,
+                }
+              }]);
+            })
+          }
+        }
       });
     }
 
@@ -540,8 +577,31 @@ export class LaravelService extends Component {
 
     function prepareEnvironmentFile() {
       const envFile = args.config?.environment?.file as string | undefined;
+      const secrets = args.config?.environment?.secrets;
 
-      if (! envFile) {
+      // If secrets are configured, the deploy command will have already
+      // fetched them and created the .env file in .sst/laravel/deploy/
+      if (secrets) {
+        // Check if the .env file was created by the deploy command
+        if (fs.existsSync(envFilePath)) {
+          // Secrets were fetched, append auto-inject variables
+          if (args.config?.environment?.autoInject !== false) {
+            applyLinkedResourcesToEnvironment();
+          }
+        } else {
+          // Secrets not fetched yet - this happens during `sst dev` or direct `sst deploy`
+          // Create an empty file and add a warning comment
+          fs.writeFileSync(envFilePath, '# WARNING: RemoteEnvVault secrets not loaded. Use `sst-laravel deploy` to fetch secrets.\n');
+
+          if (args.config?.environment?.autoInject !== false) {
+            applyLinkedResourcesToEnvironment();
+          }
+        }
+        return;
+      }
+
+      // Handle traditional env file configuration
+      if (!envFile) {
         return;
       }
 
