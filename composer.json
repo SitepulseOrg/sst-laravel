@@ -11,7 +11,7 @@
   },
   "autoload": {
     "psr-4": {
-      "Kirschbaum\\SST\\": "laravel/src/SST/"
+      "Kirschbaum\\SST\\": "laravel/src"
     }
   },
   "extra": {
