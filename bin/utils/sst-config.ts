@@ -53,8 +53,7 @@ export function extractSstProjectName(configPath: string): string | null {
   return match ? match[1] : null;
 }
 
-export function extractLaravelComponents(configPath: string): string[] {
-  const content = fs.readFileSync(configPath, 'utf-8');
+function findLaravelComponentsInContent(content: string): string[] {
   const regex = /new\s+LaravelService\s*\(\s*['"`]([^'"`]+)['"`]/g;
   const components: string[] = [];
   let match: RegExpExecArray | null;
@@ -64,6 +63,94 @@ export function extractLaravelComponents(configPath: string): string[] {
   }
 
   return components;
+}
+
+function resolveImportedFiles(content: string, sourceDir: string): string[] {
+  const importRegex = /(?:await\s+)?import\s*\(\s*['"`]([^'"`]+)['"`]\s*\)/g;
+  const resolvedFiles: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = importRegex.exec(content)) !== null) {
+    const importPath = match[1];
+
+    // Only resolve relative imports
+    if (!importPath.startsWith('.')) {
+      continue;
+    }
+
+    const resolved = resolveToFile(path.resolve(sourceDir, importPath));
+    if (resolved) {
+      resolvedFiles.push(resolved);
+    }
+  }
+
+  return resolvedFiles;
+}
+
+function resolveToFile(filePath: string): string | null {
+  // Try the path as-is (already has extension)
+  if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+    return filePath;
+  }
+
+  // Try adding extensions
+  for (const ext of ['.ts', '.js']) {
+    const withExt = filePath + ext;
+    if (fs.existsSync(withExt) && fs.statSync(withExt).isFile()) {
+      return withExt;
+    }
+  }
+
+  // Try as directory with index file
+  for (const ext of ['.ts', '.js']) {
+    const indexFile = path.join(filePath, `index${ext}`);
+    if (fs.existsSync(indexFile)) {
+      return indexFile;
+    }
+  }
+
+  return null;
+}
+
+function collectComponentsRecursively(
+  filePath: string,
+  visited: Set<string>,
+): string[] {
+  const resolved = path.resolve(filePath);
+  if (visited.has(resolved)) {
+    return [];
+  }
+  visited.add(resolved);
+
+  const content = fs.readFileSync(resolved, 'utf-8');
+  const components = findLaravelComponentsInContent(content);
+
+  const importedFiles = resolveImportedFiles(content, path.dirname(resolved));
+  for (const importedFile of importedFiles) {
+    components.push(...collectComponentsRecursively(importedFile, visited));
+  }
+
+  return components;
+}
+
+export function extractLaravelComponents(configPath: string): string[] {
+  const content = fs.readFileSync(configPath, 'utf-8');
+  const components = findLaravelComponentsInContent(content);
+
+  // Fast path: components found directly in the main config
+  if (components.length > 0) {
+    return components;
+  }
+
+  // Follow dynamic imports to find LaravelService in sub-files
+  const visited = new Set<string>([path.resolve(configPath)]);
+  const importedFiles = resolveImportedFiles(content, path.dirname(configPath));
+
+  for (const importedFile of importedFiles) {
+    components.push(...collectComponentsRecursively(importedFile, visited));
+  }
+
+  return [...new Set(components)];
 }
 
 export function extractEnvironmentFile(configPath: string, stage: string): string | null {
