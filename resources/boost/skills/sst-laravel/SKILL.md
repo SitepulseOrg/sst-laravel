@@ -57,30 +57,31 @@ Before acting, you must ingest the package's documentation.
    - If the command fails, capture the output verbatim, fix blockers, then rerun until the boilerplate (`sst.config.ts`, helper scripts, `.sst` scaffolding) is in place.
    - When users already have a tailored setup, skip regeneration but still inspect the existing files for parity with the latest templates.
 
-1. **Deploy Simplest Version**
-   - Start by asking first if the user just want to deploy the simplest version just to see if working. If so, please refer to the "Deploy simplest version" section. If you see the `sst.config.ts` is already customized and different from the initial template, please skip this step.
-      - Config: The simplest version should only deploy the `web` version.
-         - without any workers.
-         - without any domains.
-         - without any additional resources (like databases, S3 buckets, etc).
-      - Stage: It should deploy to the `dev` stage.
-      - Environment: It should use the the `config.environment.file` method for env management, using the following configuration:
-         ```ts
-         environment: {
-           file: `.env.${$app.stage}`,
-         }
-         ```
-         - Copy the `.env.example` file into a `.env.dev`
-         - Run `php artisan key:generate --input=.env.dev`
-      - Deploy: Deploy the application using `php artisan sst-laravel:deploy --stage dev`
-
-1. **Kickoff & Intake**
+2. **Kickoff & Intake**
    - Start by asking first if the user just want to deploy the simplest version just to see if working. If so, please refer to the "Deploy simplest version" section.
    - Ask (via `AskUserQuestion`) for target stage(s), AWS profile/region, and whether resources already exist.
    - Clarify deployment goals (web only vs. workers, HTTPS domains, migrations, etc.).
    - Capture blockers (missing CLI tools, no AWS creds, etc.).
 
-3. **Environment Strategy**
+3. **Deploy Simplest Version**
+   - If you see the `sst.config.ts` is already customized and different from the initial template, please skip this step.
+   - Config: The simplest version should only deploy the `web` version.
+      - without any workers.
+      - without any domains.
+      - without any additional resources (like databases, S3 buckets, etc).
+   - Stage: It should deploy to the `dev` stage.
+   - Environment: It should use the the `config.environment.file` method for env management, using the following configuration:
+      ```ts
+      environment: {
+         file: `.env.${$app.stage}`,
+      }
+      ```
+      - Copy the `.env.example` file into a `.env.dev`
+      - Run `php artisan key:generate --input=.env.dev`
+   - Deploy: Deploy the application using `php artisan sst-laravel:deploy --stage dev`
+   - In the summary, suggest to the user to decide his Environment Strategy.
+
+4. **Environment Strategy**
    - Discuss how sensitive config will be managed:
      - Local `.env` copy via `config.environment.file`.
      - `RemoteEnvVault` + `npx sst-laravel env:push/env:pull` backed by Secrets Manager (Recommend this as the most solid method).
