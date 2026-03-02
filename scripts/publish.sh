@@ -53,6 +53,6 @@ git push
 
 # Create GitHub release
 echo -e "${GREEN}Creating GitHub release v${VERSION}...${NC}"
-gh release create "v${VERSION}" --latest --generate-notes
+gh release create "${VERSION}" --latest --generate-notes
 
 echo -e "${GREEN}Successfully published version ${VERSION}!${NC}"
