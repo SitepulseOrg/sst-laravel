@@ -4,7 +4,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Component } from "../../../.sst/platform/src/components/component.js";
 import { FunctionArgs } from "../../../.sst/platform/src/components/aws/function.js";;
-import { ComponentResourceOptions, Output, all, output } from "@pulumi/pulumi";
+import { ComponentResourceOptions, Input as PulumiInput, Output, all, output } from "@pulumi/pulumi";
 import { Input } from "../../../.sst/platform/src/components/input.js";
 import { ClusterArgs } from "../../../.sst/platform/src/components/aws/cluster.js";
 import { ServiceArgs } from "../../../.sst/platform/src/components/aws/service.js";
@@ -12,6 +12,8 @@ import { Dns } from "../../../.sst/platform/src/components/dns.js";
 import { applyLinkedResourcesEnv, EnvCallback, EnvCallbacks, extractSecrets } from "./src/laravel-env";
 import { RemoteEnvVault, RemoteEnvVaultArgs } from "./src/laravel-env-manager";
 import { getPackagePath } from "./src/config";
+import { RemoteEnvFile } from "./src/remote-env-file";
+import { getSecretsFingerprint } from "./src/secrets-manager";
 
 // Re-export RemoteEnvVault for external use
 export { RemoteEnvVault, RemoteEnvVaultArgs };
@@ -281,7 +283,7 @@ export class LaravelService extends Component {
       envFileSetVariable(variableName, value);
     }
 
-    prepareEnvironmentFile();
+    const environmentFileDependency = prepareEnvironmentFile();
     prepareDeploymentScript();
 
     const cluster = new sst.aws.Cluster(`${name}-Cluster`, {
@@ -324,6 +326,8 @@ export class LaravelService extends Component {
             })
           }
         }
+      }, {
+        dependsOn: environmentFileDependency ? [environmentFileDependency] : [],
       });
     }
 
@@ -397,7 +401,7 @@ export class LaravelService extends Component {
           }
         }
       }, {
-        dependsOn: [],
+        dependsOn: environmentFileDependency ? [environmentFileDependency] : [],
       });
     }
 
@@ -509,7 +513,7 @@ export class LaravelService extends Component {
       return env;
     }
 
-    function applyLinkedResourcesToEnvironment() {
+    function getLinkedEnvironmentData() {
       const links = (args.link || []);
       const resources: any[] = [];
       const customEnv: Record<string, string | Output<string>> = {};
@@ -520,8 +524,10 @@ export class LaravelService extends Component {
           resources.push(link.resource);
 
           // If there's an envCallback, call it and merge the result
-          if (link.envCallback) {
-            const callbackResult = link.envCallback(link.resource);
+          const callback = (link as { environment?: EnvCallback; envCallback?: EnvCallback }).environment
+            || (link as { environment?: EnvCallback; envCallback?: EnvCallback }).envCallback;
+          if (callback) {
+            const callbackResult = callback(link.resource);
             Object.assign(customEnv, callbackResult);
           }
         } else {
@@ -530,21 +536,31 @@ export class LaravelService extends Component {
         }
       });
 
+      return {
+        linkedEnvironment: {
+        ...applyLinkedResourcesEnv(resources),
+        ...customEnv,
+        },
+        linkedSecrets: extractSecrets(resources).map(secret => ({
+          name: secret.name,
+          value: secret.value,
+        })),
+      };
+    }
+
+    function applyLinkedResourcesToEnvironment() {
+      const { linkedEnvironment, linkedSecrets } = getLinkedEnvironmentData();
+
       // Apply default environment variables for all resources
       if (!args.config) args.config = {};
       if (!args.config.environment) args.config.environment = {};
-
-      const resourcesEnvVars = {
-        ...applyLinkedResourcesEnv(resources),
-        ...customEnv,
-      };
 
       fs.appendFileSync(envFilePath, '\n' + "# --- SST-LARAVEL AUTO-INJECTED VARIABLES ---" + '\n');
 
       addAppUrlIfMissing();
       envFileSetVariableIfMissing('LOG_CHANNEL', 'stderr');
 
-      all(Object.entries(resourcesEnvVars)).apply(entries => {
+      all(Object.entries(linkedEnvironment)).apply(entries => {
         const envContent = entries
           .map(([key, value]) => `${key}=${value}`)
           .join('\n');
@@ -554,8 +570,7 @@ export class LaravelService extends Component {
         }
       });
 
-      const secrets = extractSecrets(resources);
-      secrets.forEach(secret => {
+      linkedSecrets.forEach(secret => {
         all([secret.name, secret.value]).apply(([name, value]) => {
           fs.appendFileSync(envFilePath, `\n${name}=${value}`);
         });
@@ -579,25 +594,8 @@ export class LaravelService extends Component {
       const envFile = args.config?.environment?.file as string | undefined;
       const secrets = args.config?.environment?.secrets;
 
-      // If secrets are configured, the deploy command will have already
-      // fetched them and created the .env file in .sst/laravel/deploy/
       if (secrets) {
-        // Check if the .env file was created by the deploy command
-        if (fs.existsSync(envFilePath)) {
-          // Secrets were fetched, append auto-inject variables
-          if (args.config?.environment?.autoInject !== false) {
-            applyLinkedResourcesToEnvironment();
-          }
-        } else {
-          // Secrets not fetched yet - this happens during `sst dev` or direct `sst deploy`
-          // Create an empty file and add a warning comment
-          fs.writeFileSync(envFilePath, '# WARNING: RemoteEnvVault secrets not loaded. Use `sst-laravel deploy` to fetch secrets.\n');
-
-          if (args.config?.environment?.autoInject !== false) {
-            applyLinkedResourcesToEnvironment();
-          }
-        }
-        return;
+        return prepareRemoteEnvironmentFile(secrets);
       }
 
       // Handle traditional env file configuration
@@ -619,29 +617,56 @@ export class LaravelService extends Component {
       }
     }
 
-    function addAppUrlIfMissing() {
-      if (!args.web?.domain) {
+    function prepareRemoteEnvironmentFile(secrets: RemoteEnvVault) {
+      fs.writeFileSync(envFilePath, '# WARNING: RemoteEnvVault secrets are loaded during deployment. Preview uses a placeholder file.\n');
+      fs.chmodSync(envFilePath, 0o755);
+
+      if ($cli.command !== 'deploy') {
         return;
       }
 
+      const { linkedEnvironment, linkedSecrets } = getLinkedEnvironmentData();
+
+      return new RemoteEnvFile(`${name}-RemoteEnv`, {
+        secretPath: secrets.path,
+        envFilePath,
+        fingerprint: output(secrets.path).apply((secretPath) => getSecretsFingerprint(secretPath)),
+        autoInject: args.config?.environment?.autoInject !== false,
+        appUrl: getAppUrl(),
+        linkedEnvironment,
+        linkedSecrets,
+      }, {
+        parent: this,
+      });
+    }
+
+    function addAppUrlIfMissing() {
       if (envFileHasVariable('APP_URL')) {
         return;
       }
 
-      let domainName: string | undefined;
+      const appUrl = getAppUrl();
+
+      if (typeof appUrl === 'string') {
+        envFileSetVariable('APP_URL', appUrl);
+      }
+    }
+
+    function getAppUrl(): PulumiInput<string | undefined> | undefined {
+      if (!args.web?.domain) {
+        return undefined;
+      }
 
       if (typeof args.web.domain === 'string') {
-        domainName = args.web.domain;
-      } else if (typeof args.web.domain === 'object' && 'name' in args.web.domain) {
-        const name = (args.web.domain as { name: Input<string> }).name;
-        if (typeof name === 'string') {
-          domainName = name;
-        }
+        return `https://${args.web.domain}`;
       }
 
-      if (domainName) {
-        envFileSetVariable('APP_URL', `https://${domainName}`);
+      if (typeof args.web.domain === 'object' && 'name' in args.web.domain) {
+        return output((args.web.domain as { name: Input<string> }).name)
+          .apply(domainName => domainName ? `https://${domainName}` : undefined);
       }
+
+      return undefined;
     }
 
     function prepareDeploymentScript() {

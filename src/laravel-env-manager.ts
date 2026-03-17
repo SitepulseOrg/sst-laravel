@@ -62,7 +62,7 @@ export interface RemoteEnvVaultArgs {
  * sst-laravel env:pull --stage production
  *
  * # Deploy (automatically fetches secrets)
- * sst-laravel deploy --stage production
+ * sst deploy --stage production
  * ```
  */
 export class RemoteEnvVault extends Component {
