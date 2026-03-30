@@ -1,7 +1,4 @@
-import * as fs from 'fs';
-import * as path from 'path';
 import { CustomResourceOptions, Input, dynamic } from '@pulumi/pulumi';
-import { pullSecrets, toEnvFileContent } from './secrets-manager';
 
 export interface RemoteEnvFileLinkedSecret {
   name: Input<string>;
@@ -67,7 +64,9 @@ export class RemoteEnvFile extends dynamic.Resource {
 }
 
 async function writeRemoteEnvironmentFile(inputs: ResolvedRemoteEnvFileInputs) {
-  const secrets = await pullSecrets(inputs.secretPath);
+  const fs = await import('node:fs');
+  const path = await import('node:path');
+  const secrets = await pullSecretsFromAws(inputs.secretPath);
 
   if (!secrets) {
     throw new Error(`RemoteEnvVault secret not found at ${inputs.secretPath}.`);
@@ -82,6 +81,74 @@ async function writeRemoteEnvironmentFile(inputs: ResolvedRemoteEnvFileInputs) {
   return {
     ...inputs,
   };
+}
+
+async function pullSecretsFromAws(secretPath: string): Promise<Record<string, string> | null> {
+  const secretValue = await getSecretValue(secretPath);
+
+  if (!secretValue) {
+    return null;
+  }
+
+  const data = JSON.parse(secretValue);
+
+  if (isChunkedSecret(data)) {
+    return pullChunkedSecrets(secretPath, data.chunks);
+  }
+
+  return data;
+}
+
+async function pullChunkedSecrets(basePath: string, chunkCount: number): Promise<Record<string, string>> {
+  const allVars: Record<string, string> = {};
+  const chunkPromises = Array.from({ length: chunkCount }, (_, i) =>
+    getSecretValue(getChunkPath(basePath, i + 1))
+  );
+
+  const chunkValues = await Promise.all(chunkPromises);
+
+  for (let i = 0; i < chunkValues.length; i++) {
+    const chunkValue = chunkValues[i];
+
+    if (chunkValue) {
+      Object.assign(allVars, JSON.parse(chunkValue));
+    } else {
+      console.warn(`Warning: Chunk ${i + 1} not found at ${getChunkPath(basePath, i + 1)}`);
+    }
+  }
+
+  return allVars;
+}
+
+async function getSecretValue(secretPath: string): Promise<string | null> {
+  const { SecretsManagerClient, GetSecretValueCommand } = await import('@aws-sdk/client-secrets-manager');
+  const client = new SecretsManagerClient({});
+
+  try {
+    const response = await client.send(new GetSecretValueCommand({
+      SecretId: secretPath,
+    }));
+
+    return response.SecretString || null;
+  } catch (error) {
+    if (isResourceNotFound(error)) {
+      return null;
+    }
+
+    throw error;
+  }
+}
+
+function isChunkedSecret(data: any): data is { chunked: true; chunks: number } {
+  return data && typeof data === 'object' && data.chunked === true && typeof data.chunks === 'number';
+}
+
+function isResourceNotFound(error: unknown): boolean {
+  return !!error && typeof error === 'object' && 'name' in error && error.name === 'ResourceNotFoundException';
+}
+
+function getChunkPath(basePath: string, chunkIndex: number): string {
+  return `${basePath}/${chunkIndex}`;
 }
 
 function buildEnvFileContent(
@@ -123,6 +190,23 @@ function buildEnvFileContent(
     '# --- SST-LARAVEL AUTO-INJECTED VARIABLES ---',
     toEnvFileContent(autoInjected),
   ].filter(Boolean).join('\n\n');
+}
+
+function toEnvFileContent(vars: Record<string, string>): string {
+  const sortedKeys = Object.keys(vars).sort();
+
+  return sortedKeys
+    .map((key) => {
+      const value = vars[key];
+
+      if (value.includes(' ') || value.includes('"') || value.includes("'") || value.includes('\n')) {
+        const escaped = value.replace(/"/g, '\\"');
+        return `${key}="${escaped}"`;
+      }
+
+      return `${key}=${value}`;
+    })
+    .join('\n');
 }
 
 function hasOwnVariable(vars: Record<string, string>, key: string) {
