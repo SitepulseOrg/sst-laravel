@@ -10,6 +10,7 @@ import {
     Output,
     all,
     output,
+    runtime,
 } from '@pulumi/pulumi';
 import { Input } from '../../../.sst/platform/src/components/input.js';
 import { ClusterArgs } from '../../../.sst/platform/src/components/aws/cluster.js';
@@ -304,6 +305,20 @@ export class LaravelService extends Component {
         const environmentFileDependency = prepareEnvironmentFile();
         prepareDeploymentScript();
 
+        const addEnvironmentFileImageDependency = (
+            _args: unknown,
+            opts: $util.CustomResourceOptions,
+            _name: string,
+        ) => {
+            if (!environmentFileDependency) {
+                return undefined;
+            }
+
+            opts.dependsOn = [environmentFileDependency];
+
+            return undefined;
+        };
+
         const cluster = new sst.aws.Cluster(`${name}-Cluster`, {
             vpc: normalizeClusterVpc(args.vpc),
         });
@@ -338,6 +353,7 @@ export class LaravelService extends Component {
                     },
 
                     transform: {
+                        image: addEnvironmentFileImageDependency,
                         taskDefinition: (args) => {
                             args.containerDefinitions = (
                                 args.containerDefinitions as $util.Output<string>
@@ -451,6 +467,7 @@ export class LaravelService extends Component {
                     },
 
                     transform: {
+                        image: addEnvironmentFileImageDependency,
                         taskDefinition: (args) => {
                             args.containerDefinitions = (
                                 args.containerDefinitions as $util.Output<string>
@@ -564,33 +581,33 @@ export class LaravelService extends Component {
                 let filePath = path.join(context, `${dockerfile}.dockerignore`);
                 if (fs.existsSync(filePath)) return filePath;
 
-                filePath = path.join(context, '.dockerignore');
-                if (fs.existsSync(filePath)) return filePath;
+                return path.join(context, '.dockerignore');
             })();
 
-            const content = dockerIgnore
+            const content = fs.existsSync(dockerIgnore)
                 ? fs.readFileSync(dockerIgnore).toString()
                 : '';
 
             const lines = content.split('\n');
 
-            // SST adds it later, so we need to add it here to ensure .sst/laravel is after it and is not ignored
-            if (dockerIgnore) {
-                if (!lines.find((line) => line === '.sst')) {
-                    fs.writeFileSync(
-                        dockerIgnore,
-                        [...lines, '', '# sst', '!.sst/laravel'].join('\n'),
-                    );
-                }
+            const normalizedLines = [
+                ...lines.filter(
+                    (line) =>
+                        line !== '.sst' &&
+                        line !== '!.sst/laravel' &&
+                        line !== '# sst' &&
+                        line !== '# sst-laravel',
+                ),
+                '',
+                '# sst',
+                '.sst',
+                '',
+                '# sst-laravel',
+                '!.sst/laravel',
+            ];
 
-                if (!lines.find((line) => line === '!.sst/laravel')) {
-                    fs.writeFileSync(
-                        dockerIgnore,
-                        [...lines, '', '# sst-laravel', '!.sst/laravel'].join(
-                            '\n',
-                        ),
-                    );
-                }
+            if (normalizedLines.join('\n') !== lines.join('\n')) {
+                fs.writeFileSync(dockerIgnore, normalizedLines.join('\n'));
             }
 
             return img;
@@ -747,14 +764,12 @@ export class LaravelService extends Component {
         }
 
         function prepareRemoteEnvironmentFile(secrets: RemoteEnvVault) {
-            fs.writeFileSync(
-                envFilePath,
-                '# WARNING: RemoteEnvVault secrets are loaded during deployment. Preview uses a placeholder file.\n',
-            );
-            fs.chmodSync(envFilePath, 0o755);
-
-            if ($cli.command !== 'deploy') {
-                return;
+            if (runtime.isDryRun() && !fs.existsSync(envFilePath)) {
+                fs.writeFileSync(
+                    envFilePath,
+                    '# WARNING: RemoteEnvVault secrets are loaded during deployment. Preview uses a placeholder file.\n',
+                );
+                fs.chmodSync(envFilePath, 0o755);
             }
 
             const { linkedEnvironment, linkedSecrets } =

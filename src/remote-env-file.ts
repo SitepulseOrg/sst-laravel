@@ -40,7 +40,9 @@ const provider: dynamic.ResourceProvider<ResolvedRemoteEnvFileInputs, ResolvedRe
 
   async diff(_, olds, news) {
     return {
-      changes: stableStringify(olds) !== stableStringify(news),
+      changes:
+        stableStringify(olds) !== stableStringify(news) ||
+        !(await matchesEnvironmentFile(news)),
     };
   },
 
@@ -81,6 +83,25 @@ async function writeRemoteEnvironmentFile(inputs: ResolvedRemoteEnvFileInputs) {
   return {
     ...inputs,
   };
+}
+
+async function matchesEnvironmentFile(inputs: ResolvedRemoteEnvFileInputs) {
+  const fs = await import('node:fs');
+
+  if (!fs.existsSync(inputs.envFilePath)) {
+    return false;
+  }
+
+  const secrets = await pullSecretsFromAws(inputs.secretPath);
+
+  if (!secrets) {
+    return false;
+  }
+
+  const expected = buildEnvFileContent(secrets, inputs) + '\n';
+  const actual = fs.readFileSync(inputs.envFilePath, 'utf8');
+
+  return actual === expected;
 }
 
 async function pullSecretsFromAws(secretPath: string): Promise<Record<string, string> | null> {
