@@ -19,6 +19,8 @@
     "templates",
     "conf",
     "images",
+    "docs",
+    "README.md",
     "Dockerfile.web",
     "Dockerfile.worker",
     ".dockerignore",

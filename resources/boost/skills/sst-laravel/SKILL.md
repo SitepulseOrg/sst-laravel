@@ -38,8 +38,8 @@ You must help the user achieve any of the following things:
 
 Before acting, you must ingest the package's documentation.
 
-- Main package's documentation: vendor/kirschbaum-development/sst-laravel/README.md
-- Public API documentation: vendor/kirschbaum-development/sst-laravel/docs/api.md.
+- Main package's documentation: node_modules/@kirschbaum-development/sst-laravel/README.md
+- Public API documentation: node_modules/@kirschbaum-development/sst-laravel/docs/api.md.
 
 ## Available CLI commands
 
