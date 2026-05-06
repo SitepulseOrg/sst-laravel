@@ -537,7 +537,7 @@ export class LaravelService extends Component {
             return {
                 id: vpc.id,
                 securityGroups: vpc.securityGroups,
-                containerSubnets: vpc.publicSubnets,
+                containerSubnets: vpc.privateSubnets,
                 loadBalancerSubnets: vpc.publicSubnets,
                 cloudmapNamespaceId: cloudmapNamespace.id,
                 cloudmapNamespaceName: cloudmapNamespace.name,
