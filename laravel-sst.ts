@@ -55,6 +55,36 @@ export interface LaravelServiceArgs {
     health?: ServiceArgs['health'];
     executionRole?: ServiceArgs['executionRole'];
     permissions?: ServiceArgs['permissions'];
+
+    /**
+     * Transform the underlying ECS Service resources. Useful for hardening the
+     * ALB (e.g. restricting the load-balancer security group to a fixed set of
+     * upstream CIDRs) or adjusting other inner resources.
+     *
+     * `image` and `taskDefinition` are managed internally and cannot be
+     * overridden here — they carry the env-file dependency wiring and the
+     * `initProcessEnabled: false` setting required by this package.
+     *
+     * @example
+     * ```js
+     * web: {
+     *   transform: {
+     *     loadBalancerSecurityGroup: (sgArgs) => {
+     *       sgArgs.ingress = [{
+     *         protocol: "tcp",
+     *         fromPort: 443,
+     *         toPort: 443,
+     *         cidrBlocks: ["173.245.48.0/20", "103.21.244.0/22"],
+     *       }];
+     *     },
+     *   },
+     * }
+     * ```
+     */
+    transform?: Omit<
+        NonNullable<ServiceArgs['transform']>,
+        'image' | 'taskDefinition'
+    >;
 }
 
 export interface LaravelWebArgs extends LaravelServiceArgs {
@@ -353,6 +383,7 @@ export class LaravelService extends Component {
                     },
 
                     transform: {
+                        ...(args.web?.transform ?? {}),
                         image: addEnvironmentFileImageDependency,
                         taskDefinition: (args) => {
                             args.containerDefinitions = (
@@ -467,6 +498,7 @@ export class LaravelService extends Component {
                     },
 
                     transform: {
+                        ...(workerConfig.transform ?? {}),
                         image: addEnvironmentFileImageDependency,
                         taskDefinition: (args) => {
                             args.containerDefinitions = (
