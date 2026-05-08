@@ -25,6 +25,7 @@ import {
 import { RemoteEnvVault, RemoteEnvVaultArgs } from './src/laravel-env-manager';
 import { getPackagePath } from './src/config';
 import { RemoteEnvFile } from './src/remote-env-file';
+import { buildReverbEnvironmentVariables } from './src/reverb';
 import { getSecretsFingerprint } from './src/secrets-manager';
 
 // Re-export RemoteEnvVault for external use
@@ -43,6 +44,50 @@ enum ImageType {
     Worker = 'worker',
     Cli = 'cli',
 }
+
+export type LaravelDomain = Input<
+    | string
+    | {
+          /**
+           * Domain name. You are able to use variables from the SST config file here.
+           *
+           * @example
+           * ```js
+           * domain: {
+           *   name: `${$app.stage}.example.com`,
+           * }
+           * ```
+           */
+          name: Input<string>;
+
+          /**
+           * Certificate ARN. Use this in case you are manually setting up the SSL certificate.
+           * This is usually needed when your DNS is not in the same AWS account or is outside of AWS.
+           *
+           * @example
+           * ```js
+           * domain: {
+           *   cert: 'arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012',
+           * }
+           * ```
+           */
+          cert?: Input<string>;
+
+          /**
+           * SST DNS configuration. You can use this configuration if your DNS is in Cloudflare or another AWS account.
+           *
+           * @see https://sst.dev/docs/component/cloudflare/dns/
+           * @see https://sst.dev/docs/component/aws/dns/
+           * @example
+           * ```js
+           * domain: {
+           *   dns: sst.cloudflare.dns(),
+           * }
+           * ```
+           */
+          dns?: Input<false | (Dns & {})>;
+      }
+>;
 
 export interface LaravelServiceArgs {
     architecture?: ServiceArgs['architecture'];
@@ -91,49 +136,35 @@ export interface LaravelWebArgs extends LaravelServiceArgs {
     /**
      * Custom domain for the web layer. (if you don't provide a domain name, you will be able to use the load balancer domain for testing (http only))
      */
-    domain?: Input<
-        | string
-        | {
-              /**
-               * Domain name. You are able to use variables from the SST config file here.
-               *
-               * @example
-               * ```js
-               * domain: {
-               *   name: `${$app.stage}.example.com`,
-               * }
-               * ```
-               */
-              name: Input<string>;
+    domain?: LaravelDomain;
+}
 
-              /**
-               * Certificate ARN. Use this in case you are manually setting up the SSL certificate.
-               * This is usually needed when your DNS is not in the same AWS account or is outside of AWS.
-               *
-               * @example
-               * ```js
-               * domain: {
-               *   cert: 'arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012',
-               * }
-               * ```
-               */
-              cert?: Input<string>;
+export interface LaravelReverbArgs extends LaravelServiceArgs {
+    /**
+     * Custom domain for the Reverb service. When provided, Reverb requests are routed over HTTPS to the Reverb server running on port 8080 by default.
+     */
+    domain?: LaravelDomain;
 
-              /**
-               * SST DNS configuration. You can use this configuration if your DNS is in Cloudflare or another AWS account.
-               *
-               * @see https://sst.dev/docs/component/cloudflare/dns/
-               * @see https://sst.dev/docs/component/aws/dns/
-               * @example
-               * ```js
-               * domain: {
-               *   dns: sst.cloudflare.dns(),
-               * }
-               * ```
-               */
-              dns?: Input<false | (Dns & {})>;
-          }
-    >;
+    /**
+     * Host the Reverb server listens on inside the container.
+     *
+     * @default `0.0.0.0`
+     */
+    host?: string;
+
+    /**
+     * Port the Reverb server listens on inside the container.
+     *
+     * @default `8080`
+     */
+    port?: number;
+
+    /**
+     * Command used to start Reverb.
+     *
+     * @default `php artisan reverb:start`
+     */
+    command?: string;
 }
 
 export interface LaravelWorkerConfig extends LaravelServiceArgs {
@@ -184,6 +215,11 @@ export interface LaravelArgs extends ClusterArgs {
      * Multiple workers settings.
      */
     workers?: LaravelWorkerConfig[];
+
+    /**
+     * If enabled, a public worker-style container will be created to run Laravel Reverb.
+     */
+    reverb?: boolean | LaravelReverbArgs;
 
     /**
      * Config settings.
@@ -292,6 +328,7 @@ export class LaravelService extends Component {
         const sitePath = args.path ?? '.';
         const absSitePath = path.resolve(sitePath.toString());
         const nodeModulePath = getPackagePath();
+        const reverbConfig = normalizeReverbConfig(args.reverb);
 
         // Determine the path where our plugin will save build files.
         // SST sets __dirname to the .sst/platform directory.
@@ -375,7 +412,9 @@ export class LaravelService extends Component {
                             ? args.web.loadBalancer
                             : {
                                   domain: args.web?.domain,
-                                  ports: getDefaultPublicPorts(),
+                                  ports: getDefaultPublicPorts(
+                                      args.web?.domain,
+                                  ),
                               },
 
                     dev: {
@@ -472,6 +511,8 @@ export class LaravelService extends Component {
             workerConfig: LaravelWorkerConfig,
             serviceName: string,
             workerBuildPath: string,
+            serviceKey = serviceName,
+            devCommand = `php ${sitePath}/artisan horizon`,
         ) => {
             createWorkerTasks(workerConfig, workerBuildPath);
 
@@ -482,7 +523,7 @@ export class LaravelService extends Component {
                 CUSTOM_CONF_PATH: workerBuildPath.replace(absSitePath, ''),
             };
 
-            this.services[serviceName] = new sst.aws.Service(
+            this.services[serviceKey] = new sst.aws.Service(
                 serviceName,
                 {
                     cluster,
@@ -492,9 +533,10 @@ export class LaravelService extends Component {
                     image: getImage(ImageType.Worker, imgBuildArgs),
                     scaling: workerConfig.scaling,
                     environment: getEnvironmentVariables(),
+                    loadBalancer: workerConfig.loadBalancer,
 
                     dev: {
-                        command: `php ${sitePath}/artisan horizon`,
+                        command: devCommand,
                     },
 
                     transform: {
@@ -524,6 +566,44 @@ export class LaravelService extends Component {
             );
         };
 
+        function addReverbService() {
+            if (!reverbConfig) {
+                return;
+            }
+
+            const reverbPort: Port = `${reverbConfig.port}/http`;
+            const reverbWorkerConfig: LaravelWorkerConfig = {
+                ...reverbConfig,
+                name: 'reverb',
+                loadBalancer: reverbConfig.loadBalancer ?? {
+                    domain: reverbConfig.domain,
+                    ports: getDefaultPublicPorts(
+                        reverbConfig.domain,
+                        reverbConfig.port,
+                    ),
+                    health: {
+                        [reverbPort]: {
+                            path: '/apps',
+                            successCodes: '200-499',
+                        },
+                    },
+                },
+                tasks: {
+                    'laravel-reverb': {
+                        command: reverbConfig.command,
+                    },
+                },
+            };
+
+            createWorkerService(
+                reverbWorkerConfig,
+                `${name}-Reverb`,
+                path.resolve(pluginBuildPath, 'worker-reverb'),
+                'reverb',
+                `php ${sitePath}/artisan reverb:start`,
+            );
+        }
+
         function addWorkerServices() {
             args.workers?.forEach((workerConfig, index) => {
                 const workerName = workerConfig.name || `worker-${index + 1}`;
@@ -546,6 +626,10 @@ export class LaravelService extends Component {
 
         if (args.workers) {
             addWorkerServices();
+        }
+
+        if (reverbConfig) {
+            addReverbService();
         }
 
         function normalizeClusterVpc(
@@ -576,13 +660,16 @@ export class LaravelService extends Component {
             };
         }
 
-        function getDefaultPublicPorts(): Ports {
+        function getDefaultPublicPorts(
+            domain?: LaravelDomain,
+            forwardPortNumber = 8080,
+        ): Ports {
             let ports;
-            const forwardPort: Port = '8080/http';
+            const forwardPort: Port = `${forwardPortNumber}/http`;
             const portHttp: Port = '80/http';
             const portHttps: Port = '443/https';
 
-            if (args.web?.domain) {
+            if (domain) {
                 ports = [
                     { listen: portHttp, forward: forwardPort },
                     { listen: portHttps, forward: forwardPort },
@@ -671,7 +758,12 @@ export class LaravelService extends Component {
         function getEnvironmentVariables() {
             const env = args.config?.environment?.vars || {};
 
-            return env;
+            return {
+                ...(shouldAutoInjectEnvironment()
+                    ? getReverbEnvironmentVariables()
+                    : {}),
+                ...env,
+            };
         }
 
         function getLinkedEnvironmentData() {
@@ -712,6 +804,7 @@ export class LaravelService extends Component {
                 linkedEnvironment: {
                     ...applyLinkedResourcesEnv(resources),
                     ...customEnv,
+                    ...getReverbEnvironmentVariables(),
                 },
                 linkedSecrets: extractSecrets(resources).map((secret) => ({
                     name: secret.name,
@@ -861,6 +954,82 @@ export class LaravelService extends Component {
             return undefined;
         }
 
+        function getReverbEnvironmentVariables() {
+            if (!reverbConfig) {
+                return {};
+            }
+
+            const publicHost = getDomainName(reverbConfig.domain);
+            const serverVariables = buildReverbEnvironmentVariables({
+                serverHost: reverbConfig.host,
+                serverPort: reverbConfig.port,
+            });
+
+            if (!publicHost) {
+                return serverVariables;
+            }
+
+            if (typeof publicHost === 'string') {
+                return buildReverbEnvironmentVariables({
+                    publicHost,
+                    serverHost: reverbConfig.host,
+                    serverPort: reverbConfig.port,
+                });
+            }
+
+            return {
+                ...serverVariables,
+                REVERB_HOST: publicHost,
+                REVERB_PORT: '443',
+                REVERB_SCHEME: 'https',
+            };
+        }
+
+        function shouldAutoInjectEnvironment(): boolean {
+            return args.config?.environment?.autoInject !== false;
+        }
+
+        function getDomainName(
+            domain?: LaravelDomain,
+        ): PulumiInput<string | undefined> | undefined {
+            if (!domain) {
+                return undefined;
+            }
+
+            if (typeof domain === 'string') {
+                return domain;
+            }
+
+            if (typeof domain === 'object' && 'name' in domain) {
+                return output((domain as { name: Input<string> }).name).apply(
+                    (domainName) => domainName || undefined,
+                );
+            }
+
+            return undefined;
+        }
+
+        function normalizeReverbConfig(
+            config?: boolean | LaravelReverbArgs,
+        ): (LaravelReverbArgs & {
+            command: string;
+            host: string;
+            port: number;
+        }) | undefined {
+            if (!config) {
+                return undefined;
+            }
+
+            const reverb = typeof config === 'boolean' ? {} : config;
+
+            return {
+                ...reverb,
+                command: reverb.command ?? 'php artisan reverb:start',
+                host: reverb.host ?? '0.0.0.0',
+                port: reverb.port ?? 8080,
+            };
+        }
+
         function prepareDeploymentScript() {
             const deployDir = path.resolve(pluginBuildPath, 'deploy');
             const dst = path.resolve(deployDir, '60-deploy.sh');
@@ -894,6 +1063,16 @@ export class LaravelService extends Component {
      */
     public get url() {
         return this.services['web'].url;
+    }
+
+    /**
+     * The URL of the Reverb service.
+     *
+     * If `reverb.domain` is set, this is the URL with the custom domain.
+     * Otherwise, it's the auto-generated load balancer URL.
+     */
+    public get reverbUrl() {
+        return this.services['reverb'].url;
     }
 
     /**

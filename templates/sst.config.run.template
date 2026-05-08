@@ -46,6 +46,15 @@
         }
       },
 
+      // this configuration will create a dedicated Reverb container for WebSocket traffic
+      // reverb: {
+      //   domain: {
+      //     name: $app.stage === "production"
+      //       ? "ws.example.com"
+      //       : `ws.${$app.stage}.example.com`,
+      //   },
+      // },
+
       // this configuration will create one worker container, which will run horizon and the laravel scheduler as background jobs
       workers: [
         {
@@ -57,4 +66,5 @@
 
     return {
       url: app.url,
+      // reverbUrl: app.reverbUrl,
     };

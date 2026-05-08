@@ -60,13 +60,14 @@ Before acting, you must ingest the package's documentation.
 2. **Kickoff & Intake**
    - Start by asking first if the user just want to deploy the simplest version just to see if working. If so, please refer to the "Deploy simplest version" section.
    - Ask (via `AskUserQuestion`) for target stage(s), AWS profile/region, and whether resources already exist.
-   - Clarify deployment goals (web only vs. workers, HTTPS domains, migrations, etc.).
+   - Clarify deployment goals (web only vs. workers, Reverb/WebSockets, HTTPS domains, migrations, etc.).
    - Capture blockers (missing CLI tools, no AWS creds, etc.).
 
 3. **Deploy Simplest Version**
    - If you see the `sst.config.ts` is already customized and different from the initial template, please skip this step.
    - Config: The simplest version should only deploy the `web` version.
       - without any workers.
+      - without Reverb.
       - without any domains.
       - without any additional resources (like databases, S3 buckets, etc).
    - Stage: It should deploy to the `dev` stage.
@@ -95,7 +96,8 @@ Before acting, you must ingest the package's documentation.
      1. Define VPC/import statements.
      2. Instantiate shared resources (databases, Redis, buckets) or import them.
      3. Create env helpers (`const env = new RemoteEnvVault(...)`) when needed.
-     4. Instantiate `new LaravelService(name, { ... })` with `path`, `vpc`, `link`, `web`, `workers`, and `config` options.
+     4. Instantiate `new LaravelService(name, { ... })` with `path`, `vpc`, `link`, `web`, `workers`, `reverb`, and `config` options.
+     5. For Laravel Reverb, prefer the first-class `reverb` option instead of a generic worker. Use `reverb: { domain: "ws.example.com" }` for a dedicated WebSocket service; SST Laravel runs `php artisan reverb:start`, exposes it through a load balancer, and auto-injects `REVERB_SERVER_HOST`, `REVERB_SERVER_PORT`, `REVERB_HOST`, `REVERB_PORT`, and `REVERB_SCHEME` when a domain is configured.
    - After modifications, run incremental validations: `npx sst build`, `npx sst-laravel deploy --stage <stage> --dry-run` (when available) to catch type errors early.
    - Encourage small diffs with explanations. If compile errors appear, quote the exact error and propose fixes.
 

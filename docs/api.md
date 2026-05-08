@@ -97,6 +97,9 @@ new LaravelService("Laravel", {
   web: {
     domain: "example.com"
   },
+  reverb: {
+    domain: "ws.example.com"
+  },
   config: {
     environment: {
       secrets: env
@@ -348,6 +351,103 @@ workers: [
 - **Type:** `ServiceArgs["permissions"]`
 - **Description:** IAM permissions specific to this worker.
 
+### `reverb`
+- **Type:** `boolean | LaravelReverbArgs`
+- **Default:** `false`
+- **Description:** Configuration for a dedicated Laravel Reverb service. When enabled, SST Laravel creates a worker-style service that runs `php artisan reverb:start` and exposes it through a load balancer.
+
+**Example:**
+```typescript
+reverb: {
+  domain: "ws.example.com",
+  scaling: {
+    min: 1,
+    max: 2
+  }
+}
+```
+
+You can also enable Reverb with defaults:
+
+```typescript
+reverb: true
+```
+
+#### `reverb.domain`
+- **Type:** `Input<string | { name: Input<string>; cert?: Input<string>; dns?: Input<false | Dns> }>`
+- **Description:** Custom domain for the Reverb service. If provided, SST Laravel routes HTTP and HTTPS traffic to Reverb's internal listener on port 8080 by default.
+
+**Example (with custom DNS provider):**
+```typescript
+reverb: {
+  domain: {
+    name: "ws.example.com",
+    dns: sst.cloudflare.dns()
+  }
+}
+```
+
+When `reverb.domain` is configured, SST Laravel auto-injects:
+
+```env
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
+REVERB_HOST=ws.example.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+```
+
+#### `reverb.host`
+- **Type:** `string`
+- **Default:** `"0.0.0.0"`
+- **Description:** Host the Reverb server listens on inside the container.
+
+#### `reverb.port`
+- **Type:** `number`
+- **Default:** `8080`
+- **Description:** Port the Reverb server listens on inside the container. The default load balancer forwards traffic to this port.
+
+#### `reverb.command`
+- **Type:** `string`
+- **Default:** `"php artisan reverb:start"`
+- **Description:** Command used to start the Reverb service.
+
+#### `reverb.architecture`
+- **Type:** `ServiceArgs["architecture"]`
+- **Description:** The CPU architecture for the Reverb service.
+
+#### `reverb.cpu`
+- **Type:** `ServiceArgs["cpu"]`
+- **Description:** CPU units for the Reverb service.
+
+#### `reverb.memory`
+- **Type:** `ServiceArgs["memory"]`
+- **Description:** Memory allocation for the Reverb service.
+
+#### `reverb.storage`
+- **Type:** `ServiceArgs["storage"]`
+- **Description:** Storage configuration for the Reverb service.
+
+#### `reverb.scaling`
+- **Type:** `ServiceArgs["scaling"]`
+- **Description:** Auto-scaling configuration for the Reverb service. Horizontal Reverb scaling requires Redis and `REVERB_SCALING_ENABLED=true` in your Laravel environment.
+
+#### `reverb.logging`
+- **Type:** `ServiceArgs["logging"]`
+- **Description:** Logging configuration for the Reverb service.
+
+#### `reverb.health`
+- **Type:** `ServiceArgs["health"]`
+- **Description:** ECS health check configuration for the Reverb service.
+
+#### `reverb.executionRole`
+- **Type:** `ServiceArgs["executionRole"]`
+- **Description:** Execution role for the Reverb service.
+
+#### `reverb.permissions`
+- **Type:** `ServiceArgs["permissions"]`
+- **Description:** IAM permissions specific to the Reverb service.
+
 ### `config`
 - **Type:** `object`
 - **Description:** Config settings.
@@ -449,6 +549,16 @@ const app = new LaravelService("MyApp", { ... });
 console.log(app.url); // https://example.com or https://xyz.elb.amazonaws.com
 ```
 
+### `reverbUrl`
+- **Type:** `Output<string>`
+- **Description:** The URL of the Reverb service. If `reverb.domain` is set, returns the custom domain URL. Otherwise, returns the auto-generated load balancer URL.
+
+**Example:**
+```typescript
+const app = new LaravelService("MyApp", { ... });
+console.log(app.reverbUrl); // https://ws.example.com or https://xyz.elb.amazonaws.com
+```
+
 ## Complete Example
 
 ```typescript
@@ -475,6 +585,14 @@ const app = new LaravelService("MyApp", {
     scaling: {
       min: 2,
       max: 10
+    }
+  },
+
+  reverb: {
+    domain: "ws.example.com",
+    scaling: {
+      min: 1,
+      max: 2
     }
   },
   
@@ -510,7 +628,8 @@ const app = new LaravelService("MyApp", {
 });
 
 return {
-  url: app.url
+  url: app.url,
+  reverbUrl: app.reverbUrl
 };
 ```
 
@@ -536,6 +655,10 @@ const app = new LaravelService("MyApp", {
       min: 2,
       max: 10
     }
+  },
+
+  reverb: {
+    domain: "ws.example.com"
   },
   
   workers: [
@@ -565,6 +688,7 @@ const app = new LaravelService("MyApp", {
 
 return {
   url: app.url,
+  reverbUrl: app.reverbUrl,
   secretsPath: env.path
 };
 ```

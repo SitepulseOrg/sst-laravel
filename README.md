@@ -88,6 +88,44 @@ const app = new LaravelService('MyLaravelApp', {
 
 Check all the `web` options [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md#web).
 
+### Reverb
+
+You can deploy a dedicated Laravel Reverb service for WebSocket traffic. Reverb runs as a worker-style container using `php artisan reverb:start`, but SST Laravel also attaches a load balancer so you can give it its own public domain.
+
+```js
+const app = new LaravelService('MyLaravelApp', {
+  web: {
+    domain: 'app.example.com',
+  },
+
+  reverb: {
+    domain: {
+      dns: sst.cloudflare.dns(),
+      name: 'ws.example.com',
+    },
+  },
+});
+
+return {
+  url: app.url,
+  reverbUrl: app.reverbUrl,
+};
+```
+
+When `reverb.domain` is configured, SST Laravel automatically injects the Reverb server variables:
+
+```env
+REVERB_SERVER_HOST=0.0.0.0
+REVERB_SERVER_PORT=8080
+REVERB_HOST=ws.example.com
+REVERB_PORT=443
+REVERB_SCHEME=https
+```
+
+If you enable horizontal scaling for Reverb, make sure your Laravel application is configured for Reverb scaling with Redis.
+
+Check all the `reverb` options [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md#reverb).
+
 ### Workers
 
 Beyond HTTP requests, you can set up one or more `workers` for your Laravel application. Workers are meant to run background commands like Laravel Horizon, the Laravel Scheduler or any background command you may need to run.
@@ -407,6 +445,7 @@ This will list all running tasks in your cluster and let you choose which one to
 ```bash
 npx sst-laravel ssh web --stage production
 npx sst-laravel ssh worker --stage production
+npx sst-laravel ssh reverb --stage production
 ```
 
 If you are naming your workers differently, you can specify the worker name:
@@ -423,6 +462,7 @@ You can view the logs for your application using the `sst-laravel logs` command.
 ```bash
 npx sst-laravel logs {service} --stage production
 npx sst-laravel logs web --stage production
+npx sst-laravel logs reverb --stage production
 npx sst-laravel logs worker --stage production
 ```
 
