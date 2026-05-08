@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 import { spawn } from 'child_process';
 import { validateDeployment, getPackageRoot } from '../utils/sst-config.js';
+import { resolveBin } from '../utils/process.js';
 
 export const deployCommand = new Command('deploy')
   .description('Deploy the application using SST')
@@ -9,10 +10,9 @@ export const deployCommand = new Command('deploy')
     try {
       validateDeployment(options.stage);
 
-      const deployProcess = spawn('npx', ['sst', 'deploy', '--stage', options.stage], {
+      const deployProcess = spawn(resolveBin('npx'), ['sst', 'deploy', '--stage', options.stage], {
         cwd: process.cwd(),
         stdio: 'inherit',
-        shell: true,
         env: {
           ...process.env,
           SST_LARAVEL_PACKAGE_ROOT: getPackageRoot(),

@@ -3,6 +3,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import * as path from 'path';
 import { findSstConfig, getTemplatePath, getPackageRoot } from '../utils/sst-config.js';
+import { resolveBin } from '../utils/process.js';
 
 export const installCommand = new Command('install')
   .description('Run SST install, handling existing .sst folder by temporarily renaming sst.config.ts')
@@ -37,10 +38,9 @@ export const installCommand = new Command('install')
 
       console.log('Running sst install...');
 
-      const installProcess = spawn('npx', ['sst', 'install'], {
+      const installProcess = spawn(resolveBin('npx'), ['sst', 'install'], {
         cwd,
         stdio: 'inherit',
-        shell: true,
         env: {
           ...process.env,
           SST_LARAVEL_PACKAGE_ROOT: getPackageRoot(),

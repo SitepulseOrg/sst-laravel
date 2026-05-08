@@ -5,15 +5,15 @@ import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { confirm } from '@inquirer/prompts';
 import { getTemplatePath, getPackageRoot } from '../utils/sst-config.js';
+import { resolveBin } from '../utils/process.js';
 
 const SKILL_FILE_PATH = fileURLToPath(new URL('../../skills/laravel-initial-setup/SKILL.md', import.meta.url));
 
 const runProcess = (command: string, args: string[], cwd: string) => {
   return new Promise<void>((resolve, reject) => {
-    const child = spawn(command, args, {
+    const child = spawn(resolveBin(command), args, {
       cwd,
-      stdio: 'inherit',
-      shell: true
+      stdio: 'inherit'
     });
 
     child.on('exit', (code) => {
@@ -143,10 +143,9 @@ export const initCommand = new Command('init')
       if (!hasSst) {
         console.log('SST not found in project. Installing SST...');
 
-        const installProcess = spawn('npm', ['install', '--save-dev', 'sst@latest'], {
+        const installProcess = spawn(resolveBin('npm'), ['install', '--save-dev', 'sst@latest'], {
           cwd,
-          stdio: 'inherit',
-          shell: true
+          stdio: 'inherit'
         });
 
         await new Promise<void>((resolve, reject) => {
@@ -194,10 +193,9 @@ export const initCommand = new Command('init')
       console.log('Created initial sst.config.ts');
       console.log('Running sst install to set up providers...');
 
-      const sstInstallProcess = spawn('npx', ['sst', 'install'], {
+      const sstInstallProcess = spawn(resolveBin('npx'), ['sst', 'install'], {
         cwd,
         stdio: 'inherit',
-        shell: true,
         env: {
           ...process.env,
           SST_LARAVEL_PACKAGE_ROOT: getPackageRoot(),
