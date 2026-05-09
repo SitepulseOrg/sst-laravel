@@ -514,7 +514,6 @@ In case your specified environment file does not contain the `APP_URL` variable,
 * Ability to extend base Docker images;
 * Add support for Inertia SSR;
 * Add support for Octane with FrankedPHP;
-* Add support for Laravel Reverb;
 * Dev mode;
 * ...what else are we missing?
 
