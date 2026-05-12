@@ -3,6 +3,7 @@
 namespace Kirschbaum\SST;
 
 use Illuminate\Support\ServiceProvider;
+use Kirschbaum\SST\Console\Commands\CommandRunCommand;
 use Kirschbaum\SST\Console\Commands\DeployCommand;
 use Kirschbaum\SST\Console\Commands\EnvPullCommand;
 use Kirschbaum\SST\Console\Commands\EnvPushCommand;
@@ -32,6 +33,7 @@ class SstLaravelServiceProvider extends ServiceProvider
             $this->commands([
                 InitCommand::class,
                 DeployCommand::class,
+                CommandRunCommand::class,
                 SshCommand::class,
                 LogsCommand::class,
                 GithubIamCommand::class,

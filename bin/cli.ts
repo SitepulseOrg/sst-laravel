@@ -6,6 +6,7 @@ import * as path from 'path';
 
 import { initCommand } from './commands/init.js';
 import { deployCommand } from './commands/deploy.js';
+import { commandRunCommand } from './commands/command-run.js';
 import { sshCommand } from './commands/ssh.js';
 import { logsCommand } from './commands/logs.js';
 import { githubIamCommand } from './commands/github-iam.js';
@@ -27,6 +28,7 @@ program
 
 program.addCommand(initCommand);
 program.addCommand(deployCommand);
+program.addCommand(commandRunCommand);
 program.addCommand(sshCommand);
 program.addCommand(logsCommand);
 program.addCommand(githubIamCommand);
