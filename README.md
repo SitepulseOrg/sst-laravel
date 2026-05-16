@@ -88,6 +88,21 @@ const app = new LaravelService('MyLaravelApp', {
 
 Check all the `web` options [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md#web).
 
+#### Load balancer health check
+
+Laravel ships a built-in `/up` health endpoint. Point the load balancer at it via `web.healthCheck` — a shortcut over `loadBalancer.health` that targets the default forward port for you:
+
+```js
+const app = new LaravelService('MyLaravelApp', {
+  web: {
+    domain: { name: 'app.example.com' },
+    healthCheck: { path: '/up' },
+  },
+});
+```
+
+All [`loadBalancer.health` options](https://sst.dev/docs/component/aws/service/#loadbalancer-health) are supported (`interval`, `timeout`, `healthyThreshold`, `unhealthyThreshold`, `successCodes`). If you set `web.loadBalancer` explicitly, `healthCheck` is ignored — configure `loadBalancer.health` directly there.
+
 ### Reverb
 
 You can deploy a dedicated Laravel Reverb service for WebSocket traffic. Reverb runs as a worker-style container using `php artisan reverb:start`, but SST Laravel also attaches a load balancer so you can give it its own public domain.

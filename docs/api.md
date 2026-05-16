@@ -259,7 +259,25 @@ web: {
 
 #### `web.health`
 - **Type:** `ServiceArgs["health"]`
-- **Description:** Health check configuration for the web service.
+- **Description:** ECS container-level health check for the web service. Distinct from `web.healthCheck` (load balancer).
+
+#### `web.healthCheck`
+- **Type:** `Input<LaravelHealthCheck>`
+- **Description:** Load balancer health check applied to the default forward port (`8080/http`). Shorthand so you don't have to override the full `loadBalancer` config just to set a path. Ignored when `loadBalancer` is provided — configure `loadBalancer.health` directly in that case.
+
+**Example:**
+```typescript
+web: {
+  domain: { name: 'app.example.com' },
+  healthCheck: {
+    path: '/up',
+    successCodes: '200',
+    interval: '30 seconds',
+    healthyThreshold: 2,
+    unhealthyThreshold: 3,
+  },
+}
+```
 
 #### `web.executionRole`
 - **Type:** `ServiceArgs["executionRole"]`

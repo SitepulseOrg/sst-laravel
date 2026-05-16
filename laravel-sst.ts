@@ -132,11 +132,72 @@ export interface LaravelServiceArgs {
     >;
 }
 
+/**
+ * Shorthand for the load balancer health check applied to the default forward
+ * port. Mirrors the inner shape of SST's `loadBalancer.health` entry, minus the
+ * per-port keying which the package fills in for you.
+ *
+ * Not used when {@link LaravelWebArgs.loadBalancer} is provided — in that case
+ * configure `loadBalancer.health` directly.
+ */
+export interface LaravelHealthCheck {
+    /**
+     * The URL path the load balancer pings for health checks.
+     * @default `"/"`
+     */
+    path?: Input<string>;
+    /**
+     * Time between health check requests. Between `5 seconds` and `300 seconds`.
+     * @default `"30 seconds"`
+     */
+    interval?: Input<`${number} ${'second' | 'seconds' | 'minute' | 'minutes'}`>;
+    /**
+     * Per-request timeout. Between `2 seconds` and `120 seconds`.
+     * @default `"5 seconds"`
+     */
+    timeout?: Input<`${number} ${'second' | 'seconds' | 'minute' | 'minutes'}`>;
+    /**
+     * Consecutive successes required to mark a target healthy. Between 2 and 10.
+     * @default `5`
+     */
+    healthyThreshold?: Input<number>;
+    /**
+     * Consecutive failures required to mark a target unhealthy. Between 2 and 10.
+     * @default `2`
+     */
+    unhealthyThreshold?: Input<number>;
+    /**
+     * HTTP response codes treated as successful (e.g. `"200"`, `"200-299"`).
+     * @default `"200"`
+     */
+    successCodes?: Input<string>;
+}
+
 export interface LaravelWebArgs extends LaravelServiceArgs {
     /**
      * Custom domain for the web layer. (if you don't provide a domain name, you will be able to use the load balancer domain for testing (http only))
      */
     domain?: LaravelDomain;
+
+    /**
+     * Load balancer health check for the web service. The package wires this
+     * to the default forward port (`8080/http`), so you only specify the
+     * check itself — not the per-port key.
+     *
+     * Distinct from {@link LaravelServiceArgs.health}, which is the ECS
+     * container-level health check.
+     *
+     * Ignored when `loadBalancer` is set — configure `loadBalancer.health`
+     * yourself in that case.
+     *
+     * @example
+     * ```js
+     * web: {
+     *   healthCheck: { path: '/up' },
+     * }
+     * ```
+     */
+    healthCheck?: Input<LaravelHealthCheck>;
 }
 
 export interface LaravelReverbArgs extends LaravelServiceArgs {
@@ -415,6 +476,13 @@ export class LaravelService extends Component {
                                   ports: getDefaultPublicPorts(
                                       args.web?.domain,
                                   ),
+                                  ...(args.web?.healthCheck
+                                      ? {
+                                            health: {
+                                                '8080/http': args.web.healthCheck,
+                                            },
+                                        }
+                                      : {}),
                               },
 
                     dev: {
