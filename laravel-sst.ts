@@ -27,17 +27,10 @@ import { getPackagePath } from './src/config';
 import { RemoteEnvFile } from './src/remote-env-file';
 import { buildReverbEnvironmentVariables } from './src/reverb';
 import { getSecretsFingerprint } from './src/secrets-manager';
+import { buildDefaultPublicPorts, Port } from './src/load-balancer';
 
 // Re-export RemoteEnvVault for external use
 export { RemoteEnvVault, RemoteEnvVaultArgs };
-
-// duplicate from cluster.ts
-type Port = `${number}/${'http' | 'https' | 'tcp' | 'udp' | 'tcp_udp' | 'tls'}`;
-
-type Ports = {
-    listen: Port;
-    forward: Port;
-}[];
 
 enum ImageType {
     Web = 'web',
@@ -198,6 +191,27 @@ export interface LaravelWebArgs extends LaravelServiceArgs {
      * ```
      */
     healthCheck?: Input<LaravelHealthCheck>;
+
+    /**
+     * When a `domain` is configured, redirect HTTP (port 80) traffic to the
+     * HTTPS (port 443) listener instead of forwarding it straight to the
+     * application. Set to `false` to keep forwarding HTTP traffic to the app.
+     *
+     * Has no effect when no `domain` is set (there is no HTTPS listener to
+     * redirect to) or when an explicit `loadBalancer` is provided (configure
+     * `loadBalancer.ports` yourself in that case).
+     *
+     * @default `true`
+     *
+     * @example
+     * ```js
+     * web: {
+     *   domain: 'example.com',
+     *   httpsRedirect: false,
+     * }
+     * ```
+     */
+    httpsRedirect?: boolean;
 }
 
 export interface LaravelReverbArgs extends LaravelServiceArgs {
@@ -473,9 +487,11 @@ export class LaravelService extends Component {
                             ? args.web.loadBalancer
                             : {
                                   domain: args.web?.domain,
-                                  ports: getDefaultPublicPorts(
-                                      args.web?.domain,
-                                  ),
+                                  ports: buildDefaultPublicPorts({
+                                      hasDomain: Boolean(args.web?.domain),
+                                      httpsRedirect:
+                                          args.web?.httpsRedirect ?? true,
+                                  }),
                                   ...(args.web?.healthCheck
                                       ? {
                                             health: {
@@ -645,10 +661,10 @@ export class LaravelService extends Component {
                 name: 'reverb',
                 loadBalancer: reverbConfig.loadBalancer ?? {
                     domain: reverbConfig.domain,
-                    ports: getDefaultPublicPorts(
-                        reverbConfig.domain,
-                        reverbConfig.port,
-                    ),
+                    ports: buildDefaultPublicPorts({
+                        hasDomain: Boolean(reverbConfig.domain),
+                        forwardPort: reverbConfig.port,
+                    }),
                     health: {
                         [reverbPort]: {
                             path: '/apps',
@@ -726,27 +742,6 @@ export class LaravelService extends Component {
                 cloudmapNamespaceId: cloudmapNamespace.id,
                 cloudmapNamespaceName: cloudmapNamespace.name,
             };
-        }
-
-        function getDefaultPublicPorts(
-            domain?: LaravelDomain,
-            forwardPortNumber = 8080,
-        ): Ports {
-            let ports;
-            const forwardPort: Port = `${forwardPortNumber}/http`;
-            const portHttp: Port = '80/http';
-            const portHttps: Port = '443/https';
-
-            if (domain) {
-                ports = [
-                    { listen: portHttp, forward: forwardPort },
-                    { listen: portHttps, forward: forwardPort },
-                ];
-            } else {
-                ports = [{ listen: portHttp, forward: forwardPort }];
-            }
-
-            return ports;
         }
 
         // TODO: We have to test if it works when a custom image is provided in sst.config.js

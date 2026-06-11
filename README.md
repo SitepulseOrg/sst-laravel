@@ -103,6 +103,21 @@ const app = new LaravelService('MyLaravelApp', {
 
 All [`loadBalancer.health` options](https://sst.dev/docs/component/aws/service/#loadbalancer-health) are supported (`interval`, `timeout`, `healthyThreshold`, `unhealthyThreshold`, `successCodes`). If you set `web.loadBalancer` explicitly, `healthCheck` is ignored — configure `loadBalancer.health` directly there.
 
+#### HTTP to HTTPS redirect
+
+When you configure a `domain` (which provisions an SSL certificate and an HTTPS listener), HTTP (port 80) traffic is redirected to HTTPS (port 443) by default. To keep forwarding HTTP traffic straight to your application instead, set `httpsRedirect: false`:
+
+```js
+const app = new LaravelService('MyLaravelApp', {
+  web: {
+    domain: { name: 'app.example.com' },
+    httpsRedirect: false,
+  },
+});
+```
+
+This has no effect when no `domain` is set, or when you provide an explicit `web.loadBalancer` (configure `loadBalancer.ports` yourself in that case).
+
 ### Reverb
 
 You can deploy a dedicated Laravel Reverb service for WebSocket traffic. Reverb runs as a worker-style container using `php artisan reverb:start`, but SST Laravel also attaches a load balancer so you can give it its own public domain.

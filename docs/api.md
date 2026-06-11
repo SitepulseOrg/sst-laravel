@@ -279,6 +279,19 @@ web: {
 }
 ```
 
+#### `web.httpsRedirect`
+- **Type:** `boolean`
+- **Default:** `true`
+- **Description:** When a `domain` is configured, redirect HTTP (port 80) traffic to the HTTPS (port 443) listener instead of forwarding it straight to the application. Set to `false` to keep forwarding HTTP traffic to the app. Has no effect when no `domain` is set (there is no HTTPS listener to redirect to) or when an explicit `loadBalancer` is provided.
+
+**Example:**
+```typescript
+web: {
+  domain: { name: 'app.example.com' },
+  httpsRedirect: false,
+}
+```
+
 #### `web.executionRole`
 - **Type:** `ServiceArgs["executionRole"]`
 - **Description:** Execution role for the web service.
