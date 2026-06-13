@@ -118,6 +118,20 @@ const app = new LaravelService('MyLaravelApp', {
 
 This has no effect when no `domain` is set, or when you provide an explicit `web.loadBalancer` (configure `loadBalancer.ports` yourself in that case).
 
+#### Access logs
+
+The web container runs nginx (`serversideup/php:*-fpm-nginx`), which logs every request — including the load balancer health-check pings — to stdout, where it ends up in CloudWatch. To silence those access logs, set `accessLogs: false`:
+
+```js
+const app = new LaravelService('MyLaravelApp', {
+  web: {
+    accessLogs: false,
+  },
+});
+```
+
+This points the serversideup `NGINX_ACCESS_LOG` variable at `/dev/null`. Error logs and the Laravel application logs are unaffected. Only the web container runs nginx, so this has no effect on workers or the Reverb service.
+
 ### Reverb
 
 You can deploy a dedicated Laravel Reverb service for WebSocket traffic. Reverb runs as a worker-style container using `php artisan reverb:start`, but SST Laravel also attaches a load balancer so you can give it its own public domain.

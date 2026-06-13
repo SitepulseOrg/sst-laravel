@@ -28,6 +28,7 @@ import { RemoteEnvFile } from './src/remote-env-file';
 import { buildReverbEnvironmentVariables } from './src/reverb';
 import { getSecretsFingerprint } from './src/secrets-manager';
 import { buildDefaultPublicPorts, Port } from './src/load-balancer';
+import { buildWebServerEnvironment } from './src/web-server';
 
 // Re-export RemoteEnvVault for external use
 export { RemoteEnvVault, RemoteEnvVaultArgs };
@@ -212,6 +213,29 @@ export interface LaravelWebArgs extends LaravelServiceArgs {
      * ```
      */
     httpsRedirect?: boolean;
+
+    /**
+     * Stream the nginx access logs from the web container to CloudWatch.
+     *
+     * The web container runs nginx (`serversideup/php:*-fpm-nginx`), which logs
+     * every request — including the load balancer health-check pings — to
+     * stdout. Set this to `false` to silence those access logs (it points the
+     * serversideup `NGINX_ACCESS_LOG` variable at `/dev/null`). Error logs and
+     * the Laravel application logs are unaffected.
+     *
+     * Only the web container runs nginx, so this has no effect on workers or
+     * the Reverb service.
+     *
+     * @default `true`
+     *
+     * @example
+     * ```js
+     * web: {
+     *   accessLogs: false,
+     * }
+     * ```
+     */
+    accessLogs?: boolean;
 }
 
 export interface LaravelReverbArgs extends LaravelServiceArgs {
@@ -466,7 +490,12 @@ export class LaravelService extends Component {
         });
 
         const addWebService = () => {
-            const envVariables = getEnvironmentVariables();
+            const envVariables = {
+                ...getEnvironmentVariables(),
+                ...buildWebServerEnvironment({
+                    accessLogs: args.web?.accessLogs,
+                }),
+            };
 
             this.services['web'] = new sst.aws.Service(
                 `${name}-Web`,

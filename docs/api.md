@@ -292,6 +292,18 @@ web: {
 }
 ```
 
+#### `web.accessLogs`
+- **Type:** `boolean`
+- **Default:** `true`
+- **Description:** Stream the nginx access logs from the web container to CloudWatch. The web container runs nginx (`serversideup/php:*-fpm-nginx`), which logs every request — including the load balancer health-check pings — to stdout. Set to `false` to silence those access logs (points the serversideup `NGINX_ACCESS_LOG` variable at `/dev/null`). Error logs and the Laravel application logs are unaffected. Only the web container runs nginx, so this has no effect on workers or the Reverb service.
+
+**Example:**
+```typescript
+web: {
+  accessLogs: false,
+}
+```
+
 #### `web.executionRole`
 - **Type:** `ServiceArgs["executionRole"]`
 - **Description:** Execution role for the web service.
