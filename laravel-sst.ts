@@ -29,6 +29,7 @@ import { buildReverbEnvironmentVariables } from './src/reverb';
 import { getSecretsFingerprint } from './src/secrets-manager';
 import { buildDefaultPublicPorts, Port } from './src/load-balancer';
 import { buildWebServerEnvironment } from './src/web-server';
+import { buildServiceArgs } from './src/service-args';
 
 // Re-export RemoteEnvVault for external use
 export { RemoteEnvVault, RemoteEnvVaultArgs };
@@ -503,6 +504,7 @@ export class LaravelService extends Component {
                     cluster,
                     link: getLinks(),
                     permissions: args.permissions,
+                    ...buildServiceArgs(args.web),
 
                     /**
                      * Image passed or use our default provided image.
@@ -642,6 +644,7 @@ export class LaravelService extends Component {
                     cluster,
                     link: getLinks(),
                     permissions: args.permissions,
+                    ...buildServiceArgs(workerConfig),
 
                     image: getImage(ImageType.Worker, imgBuildArgs),
                     scaling: workerConfig.scaling,
