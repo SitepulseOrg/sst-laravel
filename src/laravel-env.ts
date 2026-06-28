@@ -26,7 +26,7 @@ export function applyLinkedResourcesEnv(links: LinkSupportedTypes[], callbacks?:
   let environment: EnvType  = {};
 
   links.forEach((link: LinkSupportedTypes) => {
-    if (link instanceof Postgres) {
+    if (isPostgresResource(link)) {
       const defaultEnv = applyDatabaseEnv(link);
 
       environment = {
@@ -36,7 +36,7 @@ export function applyLinkedResourcesEnv(links: LinkSupportedTypes[], callbacks?:
       };
     }
 
-    if (link instanceof Redis) {
+    if (isRedisResource(link)) {
       const defaultEnv = applyRedisEnv(link);
 
       environment = {
@@ -46,7 +46,7 @@ export function applyLinkedResourcesEnv(links: LinkSupportedTypes[], callbacks?:
       };
     }
 
-    if (link instanceof Email) {
+    if (isEmailResource(link)) {
       const defaultEnv = applyEmailEnv(link);
 
       environment = {
@@ -56,7 +56,7 @@ export function applyLinkedResourcesEnv(links: LinkSupportedTypes[], callbacks?:
       };
     }
 
-    if (link instanceof Queue) {
+    if (isQueueResource(link)) {
       const defaultEnv = applyQueueEnv(link);
 
       environment = {
@@ -66,7 +66,7 @@ export function applyLinkedResourcesEnv(links: LinkSupportedTypes[], callbacks?:
       };
     }
 
-    if (link instanceof Bucket) {
+    if (isBucketResource(link)) {
       const defaultEnv = applyBucketEnv(link);
 
       environment = {
@@ -81,18 +81,18 @@ export function applyLinkedResourcesEnv(links: LinkSupportedTypes[], callbacks?:
 }
 
 export function extractSecrets(links: LinkSupportedTypes[]): Secret[] {
-  return links.filter((link): link is Secret => link instanceof Secret);
+  return links.filter((link): link is Secret => isSecretResource(link));
 }
 
 function applyDatabaseEnv(database: Database, callbacks?: EnvCallbacks): EnvType {
   let port: number | undefined;
 database.port.apply(value => port = value);
 
-  if (database instanceof Postgres || (database instanceof Aurora && port === 5432)) {
+  if (isPostgresResource(database) || (isAuroraResource(database) && port === 5432)) {
     return applyPostgresEnv(database);
   }
 
-  if (database instanceof Mysql || (database instanceof Aurora && port === 3306) || database instanceof pulumiAws.rds.Instance) {
+  if (isMysqlResource(database) || (isAuroraResource(database) && port === 3306) || database instanceof pulumiAws.rds.Instance) {
     return applyMySqlEnv(database);
   }
 
@@ -154,4 +154,47 @@ export function applyBucketEnv(bucket: Bucket): EnvType {
       FILESYSTEM_DISK: 's3',
       AWS_BUCKET: bucket.name,
   };
+}
+
+function isPostgresResource(resource: any): resource is Postgres|Aurora {
+  return resource instanceof Postgres || resourceType(resource).includes('postgres');
+}
+
+function isMysqlResource(resource: any): resource is Mysql|Aurora {
+  return resource instanceof Mysql || resourceType(resource).includes('mysql');
+}
+
+function isAuroraResource(resource: any): resource is Aurora {
+  return resource instanceof Aurora || resourceType(resource).includes('aurora');
+}
+
+function isRedisResource(resource: any): resource is Redis {
+  return resource instanceof Redis || resourceType(resource).includes('redis');
+}
+
+function isEmailResource(resource: any): resource is Email {
+  return resource instanceof Email || resourceType(resource).includes('email');
+}
+
+function isQueueResource(resource: any): resource is Queue {
+  return resource instanceof Queue || resourceType(resource).includes('queue');
+}
+
+function isBucketResource(resource: any): resource is Bucket {
+  return resource instanceof Bucket || resourceType(resource).includes('bucket');
+}
+
+function isSecretResource(resource: any): resource is Secret {
+  return resource instanceof Secret || resourceType(resource).includes('secret');
+}
+
+function resourceType(resource: any): string {
+  return [
+    resource?.constructor?.__pulumiType,
+    resource?.__pulumiType,
+    resource?.constructor?.name,
+  ]
+    .filter((value): value is string => typeof value === 'string')
+    .join(':')
+    .toLowerCase();
 }

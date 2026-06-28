@@ -10,12 +10,20 @@
     ".": {
       "types": "./laravel-sst.ts",
       "import": "./laravel-sst.ts"
-    }
+    },
+    "./runtime": {
+      "types": "./runtime.d.ts",
+      "import": "./runtime.js",
+      "default": "./runtime.js"
+    },
+    "./package.json": "./package.json"
   },
   "files": [
     "dist/bin",
     "src",
     "laravel-sst.ts",
+    "runtime.js",
+    "runtime.d.ts",
     "sst-env.d.ts",
     "templates",
     "conf",
