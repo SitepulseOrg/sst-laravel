@@ -1,9 +1,9 @@
-/// <reference path="./../../../.sst/platform/config.d.ts" />
+/// <reference path="./.sst/platform/config.d.ts" />
 
 import * as path from 'path';
 import * as fs from 'fs';
-import { Component } from '../../../.sst/platform/src/components/component.js';
-import { FunctionArgs } from '../../../.sst/platform/src/components/aws/function.js';
+import { Component } from './.sst/platform/src/components/component.js';
+import { FunctionArgs } from './.sst/platform/src/components/aws/function.js';
 import {
     ComponentResourceOptions,
     Input as PulumiInput,
@@ -12,10 +12,10 @@ import {
     output,
     runtime,
 } from '@pulumi/pulumi';
-import { Input } from '../../../.sst/platform/src/components/input.js';
-import { ClusterArgs } from '../../../.sst/platform/src/components/aws/cluster.js';
-import { ServiceArgs } from '../../../.sst/platform/src/components/aws/service.js';
-import { Dns } from '../../../.sst/platform/src/components/dns.js';
+import { Input } from './.sst/platform/src/components/input.js';
+import { ClusterArgs } from './.sst/platform/src/components/aws/cluster.js';
+import { ServiceArgs } from './.sst/platform/src/components/aws/service.js';
+import { Dns } from './.sst/platform/src/components/dns.js';
 import {
     applyLinkedResourcesEnv,
     EnvCallback,

@@ -28,8 +28,8 @@ ARG CUSTOM_CONF_PATH
 
 USER root
 
-LABEL authors="Kirschbaum"
-LABEL maintainer="Kirschbaum"
+LABEL authors="Sitepulse"
+LABEL maintainer="Sitepulse"
 
 ENV AUTORUN_ENABLED=false
 ENV AUTORUN_LARAVEL_MIGRATION=false
@@ -46,7 +46,7 @@ COPY --from=s6-build /opt/s6/ /
 RUN apt-get update \
 && apt-get upgrade -y
 
-RUN install-php-extensions gd intl
+RUN install-php-extensions gd intl bcmath
 
 ###################
 # Development image

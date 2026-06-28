@@ -1,4 +1,8 @@
 import * as path from 'path';
+import { fileURLToPath } from 'url';
+
+const configModuleFilename = fileURLToPath(import.meta.url);
+const configModuleDirname = path.dirname(configModuleFilename);
 
 /**
  * Environment variables set by the CLI to pass configuration to the SST component.
@@ -9,16 +13,16 @@ export const SST_LARAVEL_ENV = {
 } as const;
 
 /**
- * Get the root path of the @kirschbaum-development/sst-laravel package.
+ * Get the root path of the @sitepulse/sst-laravel package.
  *
  * When invoked via the CLI, this reads from the SST_LARAVEL_PACKAGE_ROOT env var.
- * Otherwise, falls back to resolving from node_modules relative to __dirname
- * (which SST sets to .sst/platform/).
+ * Otherwise, falls back to this package's root. This keeps local `file:`
+ * installs and pnpm's content-addressed package store from changing behavior.
  */
 export function getPackagePath(): string {
   if (process.env[SST_LARAVEL_ENV.PACKAGE_ROOT]) {
     return process.env[SST_LARAVEL_ENV.PACKAGE_ROOT]!;
   }
 
-  return path.resolve(__dirname, '../../node_modules/@kirschbaum-development/sst-laravel');
+  return path.resolve(configModuleDirname, '..');
 }

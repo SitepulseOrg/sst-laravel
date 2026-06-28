@@ -1,5 +1,5 @@
 {
-  "name": "kirschbaum-development/sst-laravel",
+  "name": "sitepulse/sst-laravel",
   "description": "Deploy robust, auto-scalable Laravel applications to AWS Fargate using SST and Docker",
   "type": "library",
   "license": "MIT",
@@ -11,13 +11,13 @@
   },
   "autoload": {
     "psr-4": {
-      "Kirschbaum\\SST\\": "laravel"
+      "Sitepulse\\SST\\": "laravel"
     }
   },
   "extra": {
     "laravel": {
       "providers": [
-        "Kirschbaum\\SST\\SstLaravelServiceProvider"
+        "Sitepulse\\SST\\SstLaravelServiceProvider"
       ]
     }
   },

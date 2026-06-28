@@ -1,8 +1,8 @@
 # SST Laravel
 
-![](https://github.com/kirschbaum-development/sst-laravel/raw/main/images/deploy.png)
+![](https://github.com/sitepulse/sst-laravel/raw/main/images/deploy.png)
 
-SST Laravel is an unofficial extension of [SST](https://sst.dev) created by [Kirschbaum Development](https://kirschbaumdevelopment.com) to deploy your Laravel application to AWS behind a robust, reliable and scalable infrastructure, with all the power of SST.
+SST Laravel is an unofficial extension of [SST](https://sst.dev) created by [Sitepulse](https://sitepulse.dev) to deploy your Laravel application to AWS behind a robust, reliable and scalable infrastructure, with all the power of SST.
 
 SST is a framework that makes it easy to build modern full-stack applications on your own infrastructure.
 
@@ -14,7 +14,7 @@ This package deploys a full-blown infrastructure in AWS, with zero downtime depl
 
 Behind the scenes, we use the powerful PHP containers from [Serverside Up](https://serversideup.net/open-source/docker-php/).
 
-![](https://github.com/kirschbaum-development/sst-laravel/raw/main/images/diagram.png)
+![](https://github.com/sitepulse/sst-laravel/raw/main/images/diagram.png)
 
 ## Pre-requisites
 
@@ -27,7 +27,7 @@ Behind the scenes, we use the powerful PHP containers from [Serverside Up](https
 Pull in the package using npm:
 
 ```bash
-npm install @kirschbaum-development/sst-laravel --save
+npm install @sitepulse/sst-laravel --save
 ```
 
 ## Quick start
@@ -58,12 +58,12 @@ Point your assistant at that file to get a prescriptive, secure onboarding workf
 To start using, you only need to import the component in your `sst.config.ts` file:
 
 ```ts
-import { LaravelService } from "@kirschbaum-development/sst-laravel";
+import { LaravelService } from "@sitepulse/sst-laravel";
 ```
 
 And now you can start using the `Laravel` SST component. All the configuration options are Typescript files with documentation, so
 
-To check the full list of options. check [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md). 
+To check the full list of options. check [here](https://github.com/sitepulse/sst-laravel/blob/main/docs/api.md). 
 
 ### Web (HTTP)
 
@@ -86,7 +86,7 @@ const app = new LaravelService('MyLaravelApp', {
 });
 ```
 
-Check all the `web` options [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md#web).
+Check all the `web` options [here](https://github.com/sitepulse/sst-laravel/blob/main/docs/api.md#web).
 
 #### Load balancer health check
 
@@ -168,7 +168,7 @@ REVERB_SCHEME=https
 
 If you enable horizontal scaling for Reverb, make sure your Laravel application is configured for Reverb scaling with Redis.
 
-Check all the `reverb` options [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md#reverb).
+Check all the `reverb` options [here](https://github.com/sitepulse/sst-laravel/blob/main/docs/api.md#reverb).
 
 ### Workers
 
@@ -226,7 +226,7 @@ const app = new LaravelService('MyLaravelApp', {
 });
 ```
 
-Check all the `workers` options [here](https://github.com/kirschbaum-development/sst-laravel/blob/main/docs/api.md#workers).
+Check all the `workers` options [here](https://github.com/sitepulse/sst-laravel/blob/main/docs/api.md#workers).
 
 ## Environment Variables
 
@@ -280,7 +280,7 @@ This will automatically inject the environment variables into the `.env` file of
 For a more robust environment variable management solution similar to Laravel Vapor, you can use the `RemoteEnvVault` component. This stores your environment variables in AWS Secrets Manager and provides CLI commands to push and pull secrets.
 
 ```js
-import { RemoteEnvVault, LaravelService } from "@kirschbaum-development/sst-laravel";
+import { RemoteEnvVault, LaravelService } from "@sitepulse/sst-laravel";
 
 const env = new RemoteEnvVault("Env");
 const app = new LaravelService('MyLaravelApp', {
@@ -534,7 +534,7 @@ In case you get the following error when running SST commands, run `npx sst-lara
 
 ```bash
 ✕  Failed to build sst.config.ts
-   - node_modules/@kirschbaum-development/sst-laravel/laravel-sst.ts:6:26 Could not resolve "../../../.sst/platform/src/components/component.js"
+   - node_modules/@sitepulse/sst-laravel/laravel-sst.ts:6:26 Could not resolve "../../../.sst/platform/src/components/component.js"
 ```
 
 **CD: AWS credentials are not configured**
@@ -563,11 +563,11 @@ In case your specified environment file does not contain the `APP_URL` variable,
 
 ## Security
 
-If you discover any security related issues, please email security@kirschbaumdevelopment.com instead of using the issue tracker.
+If you discover any security related issues, please email security@sitepulse.dev instead of using the issue tracker.
 
 ## Sponsorship
 
-Development of this package is sponsored by Kirschbaum Development Group, a developer driven company focused on problem solving, team building, and community. Learn more [about us](https://kirschbaumdevelopment.com) or [join us](https://careers.kirschbaumdevelopment.com)!
+Development of this package is sponsored by Sitepulse Group, a developer driven company focused on problem solving, team building, and community. Learn more [about us](https://sitepulse.dev) or [join us](https://careers.sitepulse.dev)!
 
 ## License
 

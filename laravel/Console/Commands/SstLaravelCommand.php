@@ -1,10 +1,10 @@
 <?php
 
-namespace Kirschbaum\SST\Console\Commands;
+namespace Sitepulse\SST\Console\Commands;
 
 use Illuminate\Console\Command;
-use Illuminate\Contracts\Foundation\Application;
 use Symfony\Component\Process\Process;
+use Illuminate\Contracts\Foundation\Application;
 
 /**
  * @property Application $laravel
@@ -56,7 +56,7 @@ abstract class SstLaravelCommand extends Command
      */
     protected function configureTty(Process $process): void
     {
-        if (!Process::isTtySupported() || !$this->input->isInteractive()) {
+        if (! Process::isTtySupported() || ! $this->input->isInteractive()) {
             return;
         }
 
@@ -80,7 +80,7 @@ abstract class SstLaravelCommand extends Command
             return [$localBinary];
         }
 
-        return ['npx', '--yes', '@kirschbaum-development/sst-laravel'];
+        return ['npx', '--yes', '@sitepulse/sst-laravel'];
     }
 
     /**
@@ -105,7 +105,7 @@ abstract class SstLaravelCommand extends Command
     protected function localBinaryPath(): ?string
     {
         $suffix = DIRECTORY_SEPARATOR === '\\' ? '.cmd' : '';
-        $path = $this->laravelBasePath('node_modules/.bin/sst-laravel' . $suffix);
+        $path = $this->laravelBasePath('node_modules/.bin/sst-laravel'.$suffix);
 
         return is_file($path) ? $path : null;
     }
@@ -154,7 +154,7 @@ abstract class SstLaravelCommand extends Command
 
         $base = getcwd() ?: __DIR__;
 
-        return $path === '' ? $base : rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . ltrim($path, DIRECTORY_SEPARATOR);
+        return $path === '' ? $base : rtrim($base, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.ltrim($path, DIRECTORY_SEPARATOR);
     }
 
     protected function laravelApplication(): ?Application

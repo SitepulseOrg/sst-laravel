@@ -1,20 +1,21 @@
 <?php
 
-namespace Kirschbaum\SST;
+namespace Sitepulse\SST;
 
 use Illuminate\Support\ServiceProvider;
-use Kirschbaum\SST\Console\Commands\CommandRunCommand;
-use Kirschbaum\SST\Console\Commands\DeployCommand;
-use Kirschbaum\SST\Console\Commands\EnvPullCommand;
-use Kirschbaum\SST\Console\Commands\EnvPushCommand;
-use Kirschbaum\SST\Console\Commands\GithubIamCommand;
-use Kirschbaum\SST\Console\Commands\InitCommand;
-use Kirschbaum\SST\Console\Commands\InstallCommand;
-use Kirschbaum\SST\Console\Commands\LogsCommand;
-use Kirschbaum\SST\Console\Commands\SshCommand;
+use Sitepulse\SST\Console\Commands\SshCommand;
+use Sitepulse\SST\Console\Commands\InitCommand;
+use Sitepulse\SST\Console\Commands\LogsCommand;
+use Illuminate\Contracts\Foundation\Application;
+use Sitepulse\SST\Console\Commands\DeployCommand;
+use Sitepulse\SST\Console\Commands\EnvPullCommand;
+use Sitepulse\SST\Console\Commands\EnvPushCommand;
+use Sitepulse\SST\Console\Commands\InstallCommand;
+use Sitepulse\SST\Console\Commands\GithubIamCommand;
+use Sitepulse\SST\Console\Commands\CommandRunCommand;
 
 /**
- * @property \Illuminate\Contracts\Foundation\Application $app
+ * @property Application $app
  */
 class SstLaravelServiceProvider extends ServiceProvider
 {
@@ -46,7 +47,7 @@ class SstLaravelServiceProvider extends ServiceProvider
 
     protected function configFile(): string
     {
-        return __DIR__ . '/../config/sst-laravel.php';
+        return __DIR__.'/../config/sst-laravel.php';
     }
 
     protected function publishedConfigPath(): string

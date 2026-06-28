@@ -1,7 +1,9 @@
 .build
 node_modules
 package-lock.json
-dist
+dist/*
+!dist/bin/
+!dist/bin/**
 sst.config.ts
 .sst
 vendor

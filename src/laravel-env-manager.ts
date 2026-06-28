@@ -1,8 +1,8 @@
-/// <reference path="./../../../../.sst/platform/config.d.ts" />
+/// <reference path="./../.sst/platform/config.d.ts" />
 
-import { Component } from "../../../../.sst/platform/src/components/component.js";
+import { Component } from "../.sst/platform/src/components/component.js";
 import { ComponentResourceOptions, Output, output } from "@pulumi/pulumi";
-import { Input } from "../../../../.sst/platform/src/components/input.js";
+import { Input } from "../.sst/platform/src/components/input.js";
 
 export interface RemoteEnvVaultArgs {
   /**

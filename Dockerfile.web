@@ -3,8 +3,8 @@ FROM serversideup/php:${PHP_VERSION}-fpm-nginx as base
 
 USER root
 
-LABEL authors="Kirschbaum"
-LABEL maintainer="Kirschbaum"
+LABEL authors="Sitepulse"
+LABEL maintainer="Sitepulse"
 
 ENV AUTORUN_ENABLED=false
 # ENV AUTORUN_LARAVEL_MIGRATION=true
@@ -12,7 +12,7 @@ ENV AUTORUN_ENABLED=false
 RUN apt-get update \
     && apt-get upgrade -y
 
-RUN install-php-extensions gd intl
+RUN install-php-extensions gd intl bcmath
 
 # ENV NVM_VERSION v0.39.7
 # ENV NODE_VERSION 21.6.0

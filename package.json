@@ -1,7 +1,8 @@
 {
-  "name": "@kirschbaum-development/sst-laravel",
+  "name": "@sitepulse/sst-laravel",
   "version": "0.3.8",
   "type": "module",
+  "packageManager": "pnpm@10.12.1",
   "description": "An unofficial extension of SST to deploy containerized Laravel applications to AWS Fargate.",
   "main": "laravel-sst.ts",
   "types": "laravel-sst.ts",
@@ -29,12 +30,13 @@
   ],
   "scripts": {
     "build": "tsc",
+    "prepare": "npm run build",
     "test": "vitest run",
     "release": "./scripts/publish.sh"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kirschbaum-development/sst-laravel.git"
+    "url": "git+https://github.com/sitepulse/sst-laravel.git"
   },
   "keywords": [
     "laravel",
@@ -44,13 +46,13 @@
   ],
   "author": {
     "name": "Luis Dalmolin",
-    "email": "luis@kirschbaumdevelopment.com"
+    "email": "luis@sitepulse.dev"
   },
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kirschbaum-development/sst-laravel/issues"
+    "url": "https://github.com/sitepulse/sst-laravel/issues"
   },
-  "homepage": "https://github.com/kirschbaum-development/sst-laravel#readme",
+  "homepage": "https://github.com/sitepulse/sst-laravel#readme",
   "bin": {
     "sst-laravel": "dist/bin/cli.js"
   },
@@ -63,11 +65,11 @@
     "@pulumi/aws": "^7.8.0",
     "@pulumi/pulumi": "^3.203.0",
     "commander": "^12.0.0",
-    "sst": "^3.17.25"
+    "sst": "^4.17.0"
   },
   "devDependencies": {
-    "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
+    "@types/node": "^22.20.0",
+    "typescript": "^5.9.3",
     "vitest": "4.1.5"
   },
   "publishConfig": {

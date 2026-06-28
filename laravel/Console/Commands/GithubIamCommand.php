@@ -1,6 +1,6 @@
 <?php
 
-namespace Kirschbaum\SST\Console\Commands;
+namespace Sitepulse\SST\Console\Commands;
 
 class GithubIamCommand extends SstLaravelCommand
 {

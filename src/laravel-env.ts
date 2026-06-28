@@ -1,13 +1,13 @@
-import { Email } from "../../../../.sst/platform/src/components/aws/email.js";
-import { Mysql } from "../../../../.sst/platform/src/components/aws/mysql.js";
-import { Postgres } from "../../../../.sst/platform/src/components/aws/postgres.js";
-import { Redis } from "../../../../.sst/platform/src/components/aws/redis.js";
+import { Email } from "../.sst/platform/src/components/aws/email.js";
+import { Mysql } from "../.sst/platform/src/components/aws/mysql.js";
+import { Postgres } from "../.sst/platform/src/components/aws/postgres.js";
+import { Redis } from "../.sst/platform/src/components/aws/redis.js";
 import { Output } from "@pulumi/pulumi";
 import * as pulumiAws from "@pulumi/aws";
-import { Queue } from "../../../../.sst/platform/src/components/aws/queue.js";
-import { Aurora } from "../../../../.sst/platform/src/components/aws/aurora.js";
-import { Bucket } from "../../../../.sst/platform/src/components/aws/bucket.js";
-import { Secret } from "../../../../.sst/platform/src/components/secret.js";
+import { Queue } from "../.sst/platform/src/components/aws/queue.js";
+import { Aurora } from "../.sst/platform/src/components/aws/aurora.js";
+import { Bucket } from "../.sst/platform/src/components/aws/bucket.js";
+import { Secret } from "../.sst/platform/src/components/secret.js";
 
 type EnvType = Record<string, string | Output<string>>|Record<string, string | Output<string | undefined> | undefined>;
 type Database = Postgres | Mysql | Aurora | pulumiAws.rds.Instance;

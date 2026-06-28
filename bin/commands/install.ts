@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { findSstConfig, getTemplatePath, getPackageRoot } from '../utils/sst-config.js';
 import { resolveBin } from '../utils/process.js';
+import { ensurePackageSstLink, repairSstPlatformEsbuild } from '../utils/sst-platform.js';
 
 export const installCommand = new Command('install')
   .description('Run SST install, handling existing .sst folder by temporarily renaming sst.config.ts')
@@ -14,6 +15,8 @@ export const installCommand = new Command('install')
       const configPath = findSstConfig();
 
       const sstFolderExists = fs.existsSync(sstFolder);
+      ensurePackageSstLink(cwd);
+      repairSstPlatformEsbuild(cwd);
 
       let backupPath: string | null = null;
       let tempConfigPath: string | null = null;
@@ -22,7 +25,7 @@ export const installCommand = new Command('install')
         backupPath = `${configPath}.bkp`;
         tempConfigPath = path.join(cwd, 'sst.config.ts');
 
-        console.log('.sst folder exists, temporarily renaming sst.config.ts...');
+        console.log('.sst folder does not exist, temporarily renaming sst.config.ts...');
         fs.renameSync(configPath, backupPath);
 
         // Create temporary sst.config.ts from template
@@ -57,6 +60,9 @@ export const installCommand = new Command('install')
         });
         installProcess.on('error', reject);
       });
+
+      ensurePackageSstLink(cwd);
+      repairSstPlatformEsbuild(cwd);
 
       if (backupPath && configPath) {
         // Remove temporary config file
