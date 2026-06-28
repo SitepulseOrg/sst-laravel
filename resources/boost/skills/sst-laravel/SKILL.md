@@ -48,7 +48,7 @@ Before acting, you must ingest the package's documentation.
 ## Tasks
 
 0. **Prerequisite Audit**
-   - Verify Node.js, AWS CLI, and the `sst-laravel` CLI are installed. Recommend commands such as `node -v`, `aws --version`, `npx sst-laravel --help`.
+   - Verify Node.js, AWS CLI, and the `sst-laravel` CLI are installed. Recommend commands such as `node -v`, `aws --version`, `pnpm exec sst-laravel --help`.
    - Confirm AWS credentials are loaded (`aws sts get-caller-identity`). If not, guide the user to configure profiles or SSO.
    - Confirm the Laravel application have Trust Proxies configured. This is usually configured at the `bootstrap/app.php` file. Suggest to implement that to the user in case it's not configured.
 
@@ -85,7 +85,7 @@ Before acting, you must ingest the package's documentation.
 4. **Environment Strategy**
    - Discuss how sensitive config will be managed:
      - Local `.env` copy via `config.environment.file`.
-     - `RemoteEnvVault` + `npx sst-laravel env:push/env:pull` backed by Secrets Manager (Recommend this as the most solid method).
+     - `RemoteEnvVault` + `pnpm exec sst-laravel env:push/env:pull` backed by Secrets Manager (Recommend this as the most solid method).
      - SST Secrets linked resources.
    - Provide concrete steps for each: sample commands, paths, and how to keep files out of git.
    - Warn when files contain secrets; highlight rotation or auditing considerations.
@@ -98,12 +98,12 @@ Before acting, you must ingest the package's documentation.
      3. Create env helpers (`const env = new RemoteEnvVault(...)`) when needed.
      4. Instantiate `new LaravelService(name, { ... })` with `path`, `vpc`, `link`, `web`, `workers`, `reverb`, and `config` options.
      5. For Laravel Reverb, prefer the first-class `reverb` option instead of a generic worker. Use `reverb: { domain: "ws.example.com" }` for a dedicated WebSocket service; SST Laravel runs `php artisan reverb:start`, exposes it through a load balancer, and auto-injects `REVERB_SERVER_HOST`, `REVERB_SERVER_PORT`, `REVERB_HOST`, `REVERB_PORT`, and `REVERB_SCHEME` when a domain is configured.
-   - After modifications, run incremental validations: `npx sst build`, `npx sst-laravel deploy --stage <stage> --dry-run` (when available) to catch type errors early.
+   - After modifications, run incremental validations: `npx sst build`, `pnpm exec sst-laravel deploy --stage <stage> --dry-run` (when available) to catch type errors early.
    - Encourage small diffs with explanations. If compile errors appear, quote the exact error and propose fixes.
 
 6. **Verification & Next Actions**
    - Once the config compiles, guide the user through:
-     - Running `php artisan sst-laravel:deploy --stage <stage>` or `npx sst-laravel deploy --stage <stage>`.
+     - Running `php artisan sst-laravel:deploy --stage <stage>` or `pnpm exec sst-laravel deploy --stage <stage>`.
      - Checking ECS task status, load balancer URLs, and CloudWatch logs.
      - Validating Secrets Manager entries or `.env` file copies.
    - Provide a closing summary that includes: accomplished work, remaining follow-ups (DNS validation, SSL issuance, database migrations), and risks (IAM least privilege, cost estimates, secret hygiene).
@@ -145,7 +145,7 @@ Before acting, you must ingest the package's documentation.
 
 Make sure to use the available tools to collect the most up-to-date information to give to the user. Your prefered tools should be:
 
-* SST-Laravel CLI commands; (See available commands by running `npx sst-laravel --help`)
+* SST-Laravel CLI commands; (See available commands by running `pnpm exec sst-laravel --help`)
 * SST v4 CLI (See available commands by running `npx sst --help`);
 * AWS CLI;
 * Other tools that would help the user;
@@ -158,4 +158,4 @@ Every session should conclude with:
 3. Clear instructions for DNS/SSL validation, migrations, log inspection, and future stages.
 4. Open questions, if any, explicitly listed so the user can resolve them later.
 
-Stay outcome-driven: the goal is a user who can confidently run `npx sst-laravel deploy --stage <stage>` without surprises.
+Stay outcome-driven: the goal is a user who can confidently run `pnpm exec sst-laravel deploy --stage <stage>` without surprises.

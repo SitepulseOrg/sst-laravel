@@ -2,9 +2,23 @@
 
 ![](https://github.com/sitepulse/sst-laravel/raw/main/images/deploy.png)
 
-SST Laravel is an unofficial extension of [SST](https://sst.dev) created by [Sitepulse](https://sitepulse.dev) to deploy your Laravel application to AWS behind a robust, reliable and scalable infrastructure, with all the power of SST.
+SST Laravel is an unofficial extension of [SST](https://sst.dev) to deploy your Laravel application to AWS behind a robust, reliable and scalable infrastructure, with all the power of SST.
 
 SST is a framework that makes it easy to build modern full-stack applications on your own infrastructure.
+
+## Sitepulse fork
+
+This package is the Sitepulse-maintained fork of the original SST Laravel package. It has been renamed to `@sitepulse/sst-laravel` and modified for the Sitepulse deployment workflow.
+
+The fork keeps the public `LaravelService`, `RemoteEnvVault`, and `sst-laravel` CLI surfaces familiar, while adding the behavior Sitepulse needs in production:
+
+- SST v4 compatibility.
+- pnpm-compatible installation from GitHub or npm-style package sources.
+- Package-local SST platform wiring so pnpm's content-addressed store does not need an app-side bridge script.
+- Docker images with the PHP extensions Sitepulse needs, including `bcmath`.
+- First-class production defaults used by Sitepulse, including Reverb support, worker task helpers, remote environment vault support, load balancer health checks, HTTPS redirect controls, and web access-log controls.
+
+This fork is optimized for Sitepulse first. It can still be useful for other Laravel apps deploying through SST, but changes are evaluated against Sitepulse's infrastructure and deployment needs.
 
 ## What gets deployed
 
@@ -30,12 +44,32 @@ Pull in the package using npm:
 npm install @sitepulse/sst-laravel --save
 ```
 
+Sitepulse currently consumes this fork directly from GitHub:
+
+```bash
+pnpm add -D github:SitepulseOrg/sst-laravel#master
+```
+
+After installation, run the CLI through pnpm:
+
+```bash
+pnpm exec sst-laravel init
+```
+
+For a one-off run without adding it to the project first, include the GitHub package spec:
+
+```bash
+pnpm dlx github:SitepulseOrg/sst-laravel#master init
+```
+
+Do not use `pnpx sst-laravel ...`; that asks npm for an unscoped package named `sst-laravel`. The package is scoped as `@sitepulse/sst-laravel`, while the executable it exposes is named `sst-laravel`.
+
 ## Quick start
 
 To get started quickly, you can use the `init` command:
 
 ```bash
-npx sst-laravel init
+pnpm exec sst-laravel init
 ```
 
 Running `init` now also prompts you to install the SST Laravel Initial Setup AI skill. Accepting the prompt will automatically detect whether `laravel/boost` ≥ 2.0 is available via Composer; if so, the skill is copied into `.ai/skills/sst-laravel-initial-setup/SKILL.md` and `php artisan boost:update` is executed. Otherwise, the command falls back to `npx skills add` with the bundled skill file.
@@ -45,7 +79,7 @@ Running `init` now also prompts you to install the SST Laravel Initial Setup AI 
 Projects that rely on AI copilots (like OpenCode) can import the `skills/laravel-initial-setup/SKILL.md` file from this package. The skill walks an assistant through:
 
 - Auditing prerequisites (Node, AWS CLI, credentials, `sst-laravel` CLI)
-- Bootstrapping your repo by running `npx sst-laravel init` before any config changes
+- Bootstrapping your repo by running `pnpm exec sst-laravel init` before any config changes
 - Choosing the right environment strategy (`RemoteEnvVault`, SST Secrets, or `.env` files)
 - Inspecting/creating VPC resources through the AWS CLI
 - Iteratively editing `sst.config.ts` until your Laravel service is deployable
@@ -309,10 +343,10 @@ To push your local `.env` file to AWS Secrets Manager:
 
 ```bash
 # Push .env.production to the production stage
-npx sst-laravel env:push --stage production --input .env.production
+pnpm exec sst-laravel env:push --stage production --input .env.production
 
 # Push .env to staging (interactive)
-npx sst-laravel env:push --stage staging
+pnpm exec sst-laravel env:push --stage staging
 ```
 
 #### Pulling Secrets
@@ -321,10 +355,10 @@ To pull secrets from AWS Secrets Manager to a local file:
 
 ```bash
 # Pull from production to .env.production (default)
-npx sst-laravel env:pull --stage production
+pnpm exec sst-laravel env:pull --stage production
 
 # Pull from staging to a custom file
-npx sst-laravel env:pull --stage staging --output .env.local
+pnpm exec sst-laravel env:pull --stage staging --output .env.local
 ```
 
 #### Deploying with Secrets
@@ -332,23 +366,23 @@ npx sst-laravel env:pull --stage staging --output .env.local
 When using `RemoteEnvVault`, deploy using the `sst-laravel deploy` command which automatically fetches secrets before building:
 
 ```bash
-npx sst-laravel deploy --stage production
+pnpm exec sst-laravel deploy --stage production
 ```
 
 #### Workflow Example
 
 ```bash
 # 1. Initial setup - push your environment file
-npx sst-laravel env:push --stage production --input .env.production
+pnpm exec sst-laravel env:push --stage production --input .env.production
 
 # 2. Deploy (secrets are automatically fetched)
-npx sst-laravel deploy --stage production
+pnpm exec sst-laravel deploy --stage production
 
 # 3. Update secrets later
-npx sst-laravel env:pull --stage production  # Creates .env.production
+pnpm exec sst-laravel env:pull --stage production  # Creates .env.production
 # Edit .env.production
-npx sst-laravel env:push --stage production --input .env.production
-npx sst-laravel deploy --stage production
+pnpm exec sst-laravel env:push --stage production --input .env.production
+pnpm exec sst-laravel deploy --stage production
 ```
 
 You can also use a custom path for the secrets:
@@ -467,9 +501,9 @@ php artisan migrate --force
 To deploy your application, you can use the `sst-laravel deploy` command. You must be authenticated with AWS in your terminal session to deploy.
 
 ```bash
-npx sst-laravel deploy --stage {stage}
-npx sst-laravel deploy --stage sandbox
-npx sst-laravel deploy --stage production
+pnpm exec sst-laravel deploy --stage {stage}
+pnpm exec sst-laravel deploy --stage sandbox
+pnpm exec sst-laravel deploy --stage production
 ```
 
 > **Note:** If you're using `RemoteEnvVault` for secrets management, you should use `sst-laravel deploy` instead of `sst deploy` directly. This ensures secrets are fetched from AWS Secrets Manager before the Docker build.
@@ -479,7 +513,7 @@ npx sst-laravel deploy --stage production
 Using the `sst-laravel` CLI tool, you can easily connect to your running ECS containers for debugging and troubleshooting.
 
 ```bash
-npx sst-laravel ssh --stage production
+pnpm exec sst-laravel ssh --stage production
 ```
 
 This will list all running tasks in your cluster and let you choose which one to connect to.
@@ -487,16 +521,16 @@ This will list all running tasks in your cluster and let you choose which one to
 **Connect to a specific service:**
 
 ```bash
-npx sst-laravel ssh web --stage production
-npx sst-laravel ssh worker --stage production
-npx sst-laravel ssh reverb --stage production
+pnpm exec sst-laravel ssh web --stage production
+pnpm exec sst-laravel ssh worker --stage production
+pnpm exec sst-laravel ssh reverb --stage production
 ```
 
 If you are naming your workers differently, you can specify the worker name:
 
 ```bash
-npx sst-laravel ssh {worker-name} --stage production
-npx sst-laravel ssh worker --stage production
+pnpm exec sst-laravel ssh {worker-name} --stage production
+pnpm exec sst-laravel ssh worker --stage production
 ```
 
 ## Logs
@@ -504,10 +538,10 @@ npx sst-laravel ssh worker --stage production
 You can view the logs for your application using the `sst-laravel logs` command.
 
 ```bash
-npx sst-laravel logs {service} --stage production
-npx sst-laravel logs web --stage production
-npx sst-laravel logs reverb --stage production
-npx sst-laravel logs worker --stage production
+pnpm exec sst-laravel logs {service} --stage production
+pnpm exec sst-laravel logs web --stage production
+pnpm exec sst-laravel logs reverb --stage production
+pnpm exec sst-laravel logs worker --stage production
 ```
 
 This will show the logs for your application in real-time.
@@ -530,7 +564,7 @@ SST Laravel puts the container behind a load balancer, so you must configure you
 
 **Failed to build sst.config.ts**
 
-In case you get the following error when running SST commands, run `npx sst-laravel install`. If this fails, temporarily rename the `sst.config.ts` file, and run `npx sst install`.
+In case you get the following error when running SST commands, run `pnpm exec sst-laravel install`. If this fails, temporarily rename the `sst.config.ts` file, and run `npx sst install`.
 
 ```bash
 ✕  Failed to build sst.config.ts

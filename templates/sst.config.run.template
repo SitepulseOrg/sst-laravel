@@ -12,7 +12,7 @@
      * To get started, create the environment file first, and push it to the remote vault. Examples:
      * - `cp .env.example .env.dev`
      * - `php artisan key:generate --env .env.dev`
-     * - `npx sst-laravel env:push --stage dev`
+     * - `pnpm exec sst-laravel env:push --stage dev`
      * 
      * Replace `dev` with the stage you want to set up
      */
